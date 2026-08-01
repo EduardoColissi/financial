@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
+import { logoutAction } from "@/app/actions/auth";
 import { Money, Pct } from "@/components/ui/Money";
 import type { RefMonth } from "@/domain/period";
+import { NewEntryButton, NewEntryModal } from "@/features/lancamentos/NewEntryModal.client";
 import type { AppContext } from "@/services/context";
+import type { EntryFormOptions } from "@/services/entry-form";
 import type { ShellData } from "@/services/shell";
 import { NAV } from "./nav";
 import { HeaderTitle, MonthSwitcher, NavItem, PrivacyToggle, SearchBox } from "./shell.client";
@@ -18,11 +21,13 @@ export function Shell({
   ctx,
   month,
   data,
+  entryOptions,
   children,
 }: {
   ctx: AppContext;
   month: RefMonth;
   data: ShellData;
+  entryOptions: EntryFormOptions;
   children: ReactNode;
 }) {
   const badges: Record<string, { text: string; tone?: "warn" | "pos" } | undefined> = {
@@ -98,12 +103,12 @@ export function Shell({
               </span>
             </div>
 
-            <button type="button" className={s.newButton}>
+            <NewEntryButton className={s.newButton}>
               <span className={s.newButtonPlus} aria-hidden="true">
                 +
               </span>
               Novo lançamento
-            </button>
+            </NewEntryButton>
 
             <div className={s.user}>
               <div className={s.avatar} aria-hidden="true">
@@ -113,6 +118,13 @@ export function Shell({
                 <span className={s.userName}>Eduardo</span>
                 <span className={s.userRole}>conta pessoal</span>
               </div>
+              {/* <form> em vez de onClick: sair e' mutacao (apaga o cookie), e
+                  assim funciona mesmo antes de o JS carregar. */}
+              <form action={logoutAction} className={s.logoutForm}>
+                <button type="submit" className={s.logout} title="Sair">
+                  Sair
+                </button>
+              </form>
             </div>
           </div>
         </aside>
@@ -129,6 +141,10 @@ export function Shell({
           <main className={s.content}>{children}</main>
         </div>
       </div>
+
+      {/* Mora no shell, nao nas paginas: abre de qualquer aba, e `layout.tsx`
+          nao recebe `searchParams` — quem le' o `?novo=1` e' a ilha client. */}
+      <NewEntryModal options={entryOptions} />
     </div>
   );
 }

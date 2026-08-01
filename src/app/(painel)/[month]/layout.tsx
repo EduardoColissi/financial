@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { parseMonthParam } from "@/domain/period";
 import { Shell } from "@/features/shell/Shell";
 import { getContext } from "@/services/context";
+import { getEntryFormOptions } from "@/services/entry-form";
 import { getShellData } from "@/services/shell";
 
 /**
@@ -26,10 +27,15 @@ export default async function PainelLayout({
   if (!month) notFound();
 
   const ctx = await getContext();
-  const data = await getShellData(ctx, month);
+  const [data, entryOptions] = await Promise.all([
+    getShellData(ctx, month),
+    // O modal de novo lancamento abre de qualquer aba, entao as opcoes descem
+    // com o shell. Sao tres selects pequenos e indexados.
+    getEntryFormOptions(ctx, month),
+  ]);
 
   return (
-    <Shell ctx={ctx} month={month} data={data}>
+    <Shell ctx={ctx} month={month} data={data} entryOptions={entryOptions}>
       {children}
     </Shell>
   );

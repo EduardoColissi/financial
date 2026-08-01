@@ -59,10 +59,70 @@ Não use `podman compose` — nesta máquina ele cai no `docker-compose.exe` e e
 |---|---|
 | `pnpm dev` | desenvolvimento na porta 3005 |
 | `pnpm build` | build de produção |
-| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm verify` | `typecheck` + `lint` + testes unitários |
+| `pnpm e2e` | Playwright (sobe o próprio servidor na 3006 e refaz o seed) |
+| `pnpm db:migrate` / `db:seed` / `db:reset` | schema e dados |
+| `pnpm db:clear-attempts` | destrava o login depois de 5 tentativas erradas (só local) |
+| `pnpm auth:hash` | gera `APP_PASSWORD_HASH` e `AUTH_SECRET` (interativo) |
 
-Os scripts de lint, teste e banco (`db:*`, `verify`, `auth:hash`) entram nos passos
-seguintes do plano.
+## Acesso
+
+O painel fica numa URL pública, então **toda** rota — página e API — exige sessão.
+Duas camadas, de propósito:
+
+1. `src/proxy.ts` (o antigo `middleware.ts`) filtra na borda. O matcher **precisa**
+   cobrir `/api/*`; deixar `api` de fora é o erro clássico, e há um spec E2E que
+   falha se alguém afrouxar.
+2. `requireSession()` dentro de `getContext()` e de cada action. Não é redundância:
+   Server Actions são POST na rota onde foram usadas, então um refactor de rota pode
+   tirar a cobertura do proxy sem aviso — e middleware do Next já teve bypass por
+   header (CVE-2025-29927).
+
+Sessão é cookie assinado com HMAC-SHA256 (`AUTH_SECRET`), sem tabela. Não há como
+revogar uma sessão isolada; trocar o `AUTH_SECRET` derruba todas — que é a operação
+que importa aqui.
+
+**Riscos aceitos, ditos em voz alta:** sem segundo fator; quem tem a passphrase vê
+tudo; quem acessa o dashboard da Vercel lê o `AUTH_SECRET` e forja um cookie. É
+proporcional a um painel pessoal. O inaceitável seria confiar na *Vercel
+Authentication* achando que ela protege produção — ela só protege previews.
+
+## Deploy
+
+**Ordem obrigatória. Fora dela, um preview roda migration no banco de produção.**
+
+1. **Neon** — projeto em `sa-east-1`, branch `main` (produção) e branch `dev`
+   (previews). Regra dura: **nenhuma env de Preview aponta para `main`.** Configure
+   isso *antes* do primeiro preview deploy.
+2. **Branch de backup** antes de tocar em `main`:
+   `backup-AAAA-MM-DD` (copy-on-write, instantânea). O restore do plano free cobre
+   só 6 horas — sem o branch, uma migration destrutiva não tem volta.
+3. **Migrations rodam da sua máquina**, apontando para a branch alvo:
+   `pnpm db:migrate`. Nunca no build da Vercel — o build roda em todo preview.
+4. **Variáveis na Vercel**, nos três ambientes. `AUTH_SECRET` **diferente por
+   ambiente**, senão um cookie de preview abre produção:
+
+   | Variável | Production | Preview | Observação |
+   |---|---|---|---|
+   | `DATABASE_URL` | pooler da branch `main` | pooler da branch `dev` | |
+   | `DATABASE_URL_UNPOOLED` | direta da `main` | direta da `dev` | migrations |
+   | `AUTH_SECRET` | valor A | valor B | 32 bytes, distintos |
+   | `APP_PASSWORD_HASH` | `pnpm auth:hash` | idem | a senha em claro nunca sai da sua máquina |
+   | `CRON_SECRET` | gerado pela Vercel | — | sem ele `/api/cron/daily` recusa tudo |
+   | `APP_TIMEZONE` | `America/Sao_Paulo` | idem | |
+   | `APP_FAKE_TODAY` | **vazia** | vazia | ignorada em produção de qualquer forma |
+
+5. **Vercel Authentication ligada** — protege os previews (produção continua
+   pública; quem protege ela é o gate acima).
+6. **Cron** — `vercel.json` já declara `/api/cron/daily` às 06:00 UTC (03:00 BRT).
+   O Hobby permite um por dia; a materialização de mês é preguiçosa e idempotente,
+   então o cron é cinto de segurança, não dependência.
+7. **Smoke em produção**, nesta ordem:
+   - URL sem cookie → 307 para `/login`
+   - `GET /api/qualquer` sem cookie → **401 JSON**, não 200 e não HTML
+   - login entra; as sete abas carregam com dado
+   - navegação de mês muda a URL
+   - `robots.txt` responde `Disallow: /`
 
 ## Convenções
 

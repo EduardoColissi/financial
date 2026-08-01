@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>
+*{box-sizing:border-box}
+body{margin:0;background:oklch(0.20 0.035 168);-webkit-font-smoothing:antialiased}
+a{color:oklch(0.84 0.15 158);text-decoration:none}
+a:hover{color:oklch(0.92 0.13 158)}
+input,button,select{font-family:inherit}
+input::placeholder{color:oklch(0.62 0.02 168)}
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:2px;background:rgba(255,255,255,.14);outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:oklch(0.84 0.16 158);border:2px solid oklch(0.24 0.04 168);cursor:pointer}
+::selection{background:oklch(0.50 0.12 158)}
+</style></helmet>
+
+<div style="position:relative;min-height:100vh;min-width:1320px;font-family:'Instrument Sans',system-ui,sans-serif;color:oklch(0.96 0.012 168);background:oklch(0.20 0.035 168);overflow:hidden">
+<div style="position:fixed;top:-180px;left:-140px;width:640px;height:640px;border-radius:50%;background:radial-gradient(circle,oklch(0.62 0.19 158/.42),transparent 68%);filter:blur(46px);pointer-events:none"></div>
+<div style="position:fixed;bottom:-220px;right:-120px;width:720px;height:720px;border-radius:50%;background:radial-gradient(circle,oklch(0.58 0.15 196/.34),transparent 68%);filter:blur(52px);pointer-events:none"></div>
+<div style="position:fixed;top:38%;left:44%;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,oklch(0.66 0.16 128/.20),transparent 70%);filter:blur(60px);pointer-events:none"></div>
+
+<div style="position:relative;display:flex;min-height:100vh">
+
+<aside style="width:244px;flex:none;padding:22px 16px;display:flex;flex-direction:column;gap:22px;position:sticky;top:0;height:100vh;background:rgba(255,255,255,.05);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);border-right:1px solid rgba(255,255,255,.09)">
+  <div style="display:flex;align-items:center;gap:10px;padding:0 4px">
+    <div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(140deg,oklch(0.86 0.17 155),oklch(0.62 0.16 178));display:grid;place-items:center;font:700 14px/1 'Instrument Sans';color:oklch(0.22 0.05 168)">₲</div>
+    <div style="display:flex;flex-direction:column;gap:2px">
+      <span style="font:600 14.5px/1 'Instrument Sans';letter-spacing:-.015em">Meu Caixa</span>
+      <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.74 0.03 168);letter-spacing:.05em">finanças pessoais</span>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:13px;padding:8px 8px 8px 12px">
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <span style="font:600 12px/1 'Instrument Sans'">Agosto 2026</span>
+      <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.76 0.03 168)">hoje · 01/08</span>
+    </div>
+    <div style="display:flex;gap:3px">
+      <button style="width:23px;height:23px;border:none;border-radius:7px;background:rgba(255,255,255,.09);color:oklch(0.94 0.01 168);font:500 11px/1 'IBM Plex Mono';cursor:pointer" style-hover="background:rgba(255,255,255,.18)">‹</button>
+      <button style="width:23px;height:23px;border:none;border-radius:7px;background:rgba(255,255,255,.09);color:oklch(0.94 0.01 168);font:500 11px/1 'IBM Plex Mono';cursor:pointer" style-hover="background:rgba(255,255,255,.18)">›</button>
+    </div>
+  </div>
+
+  <nav style="display:flex;flex-direction:column;gap:3px">
+    <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.12em;text-transform:uppercase;color:oklch(0.70 0.03 168);padding:0 8px 8px">Mês corrente</span>
+    <sc-for list="{{ navMes }}" as="n" hint-placeholder-count="6">
+      <button onClick="{{ n.onClick }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid {{ n.borda }};border-radius:12px;padding:10px 11px;text-align:left;font:500 12.5px/1 'Instrument Sans';cursor:pointer;color:{{ n.fg }};background:{{ n.bg }}" style-hover="background:rgba(255,255,255,.09)">
+        <span>{{ n.label }}</span><span style="font:500 9.5px/1 'IBM Plex Mono';color:{{ n.badgeCor }}">{{ n.badge }}</span>
+      </button>
+    </sc-for>
+    <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.12em;text-transform:uppercase;color:oklch(0.70 0.03 168);padding:16px 8px 8px">Patrimônio</span>
+    <sc-for list="{{ navPat }}" as="n" hint-placeholder-count="1">
+      <button onClick="{{ n.onClick }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid {{ n.borda }};border-radius:12px;padding:10px 11px;text-align:left;font:500 12.5px/1 'Instrument Sans';cursor:pointer;color:{{ n.fg }};background:{{ n.bg }}" style-hover="background:rgba(255,255,255,.09)">
+        <span>{{ n.label }}</span><span style="font:500 9.5px/1 'IBM Plex Mono';color:{{ n.badgeCor }}">{{ n.badge }}</span>
+      </button>
+    </sc-for>
+  </nav>
+
+  <div style="margin-top:auto;display:flex;flex-direction:column;gap:14px">
+    <div style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px">
+      <span style="font:600 9px/1 'Instrument Sans';letter-spacing:.11em;text-transform:uppercase;color:oklch(0.76 0.04 158)">Patrimônio total</span>
+      <span style="font:600 18px/1 'Instrument Sans';letter-spacing:-.03em;font-variant-numeric:tabular-nums">{{ heroPatrimonio }}</span>
+      <span style="font:400 9.5px/1.3 'IBM Plex Mono';color:oklch(0.84 0.13 158)">{{ heroRend }}</span>
+    </div>
+    <button onClick="{{ openModal }}" style="border:none;border-radius:13px;background:linear-gradient(135deg,oklch(0.86 0.17 155),oklch(0.72 0.16 168));color:oklch(0.22 0.05 168);font:600 12.5px/1 'Instrument Sans';padding:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px" style-hover="filter:brightness(1.08)">
+      <span style="font:400 15px/1 'IBM Plex Mono'">+</span> Novo lançamento
+    </button>
+    <div style="display:flex;align-items:center;gap:9px;padding-top:10px;border-top:1px solid rgba(255,255,255,.09)">
+      <div style="width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;font:600 10px/1 'IBM Plex Mono'">RS</div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <span style="font:500 11.5px/1 'Instrument Sans'">Rafael S.</span>
+        <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.74 0.03 168)">conta pessoal</span>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div style="flex:1;min-width:0;display:flex;flex-direction:column">
+  <header style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding:24px 30px 18px;background:rgba(255,255,255,.04);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-bottom:1px solid rgba(255,255,255,.08);position:sticky;top:0;z-index:5">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <h1 style="margin:0;font:600 21px/1.1 'Instrument Sans';letter-spacing:-.025em">{{ viewTitle }}</h1>
+      <p style="margin:0;font:400 12px/1.3 'Instrument Sans';color:oklch(0.78 0.025 168)">{{ viewSub }}</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.11);border-radius:12px;padding:8px 11px;background:rgba(255,255,255,.06);width:230px">
+        <span style="width:9px;height:9px;border:1.5px solid oklch(0.76 0.03 168);border-radius:50%;flex:none"></span>
+        <input placeholder="Buscar lançamento, categoria…" value="{{ busca }}" onChange="{{ onBusca }}" style="border:none;outline:none;background:none;font:400 11.5px/1 'Instrument Sans';width:100%;color:oklch(0.96 0.012 168)">
+      </div>
+      <button onClick="{{ togglePriv }}" style="border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.06);border-radius:12px;padding:9px 12px;font:500 11.5px/1 'Instrument Sans';color:oklch(0.90 0.02 168);cursor:pointer" style-hover="background:rgba(255,255,255,.12)">{{ privLabel }}</button>
+      <button style="border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.06);border-radius:12px;padding:9px 12px;font:500 11.5px/1 'Instrument Sans';color:oklch(0.90 0.02 168);cursor:pointer" style-hover="background:rgba(255,255,255,.12)">Exportar CSV</button>
+    </div>
+  </header>
+
+  <main style="padding:24px 30px 56px;display:flex;flex-direction:column;gap:20px">
+    <sc-if value="{{ isVisao }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+        <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+          <div style="background:{{ k.bg }};backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid {{ k.borda }};border-radius:20px;padding:17px 18px;display:flex;flex-direction:column;gap:10px">
+            <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">{{ k.label }}</span>
+            <span style="font:600 29px/1 'Instrument Sans';letter-spacing:-.035em;font-variant-numeric:tabular-nums;color:{{ k.cor }}">{{ k.valor }}</span>
+            <span style="font:400 10.5px/1.35 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ k.nota }}</span>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:14px 18px;display:flex;align-items:center;gap:14px">
+        <span style="width:9px;height:9px;border-radius:3px;flex:none;display:block;background:oklch(0.84 0.16 158)"></span>
+        <p style="margin:0;font:400 11.5px/1.5 'Instrument Sans';color:oklch(0.88 0.02 168)">{{ notaRendimento }}</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:18px">
+              <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Fluxo de caixa · 6 meses</h2>
+              <div style="display:flex;gap:14px;font:400 10px/1 'IBM Plex Mono';color:oklch(0.80 0.025 168)">
+                <span style="display:flex;align-items:center;gap:5px"><i style="width:8px;height:8px;border-radius:2px;background:oklch(0.84 0.16 158);display:block"></i>entradas</span>
+                <span style="display:flex;align-items:center;gap:5px"><i style="width:8px;height:8px;border-radius:2px;background:oklch(0.68 0.15 25);display:block"></i>saídas</span>
+                <span style="display:flex;align-items:center;gap:5px"><i style="width:8px;height:8px;border-radius:2px;background:oklch(0.72 0.13 210);display:block"></i>aporte</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px;align-items:end;height:184px;border-bottom:1px solid rgba(255,255,255,.12)">
+              <sc-for list="{{ fluxo }}" as="m" hint-placeholder-count="6">
+                <div style="display:flex;align-items:flex-end;gap:4px;height:100%;justify-content:center">
+                  <div title="entradas" style="width:16px;border-radius:4px 4px 0 0;background:linear-gradient(oklch(0.88 0.16 158),oklch(0.70 0.16 162));height:{{ m.hIn }}"></div>
+                  <div title="saídas" style="width:16px;border-radius:4px 4px 0 0;background:linear-gradient(oklch(0.72 0.15 25),oklch(0.58 0.14 22));height:{{ m.hOut }}"></div>
+                  <div title="aporte" style="width:16px;border-radius:4px 4px 0 0;background:linear-gradient(oklch(0.76 0.13 210),oklch(0.60 0.12 214));height:{{ m.hInv }}"></div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-top:11px">
+              <sc-for list="{{ fluxo }}" as="m" hint-placeholder-count="6">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+                  <span style="font:500 10.5px/1 'Instrument Sans'">{{ m.mes }}</span>
+                  <span style="font:400 9.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;color:oklch(0.84 0.13 158)">{{ m.saldoFmt }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:15px">
+              <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Gastos por grupo e categoria</h2>
+              <button onClick="{{ goCat }}" style="border:none;background:none;font:500 10.5px/1 'Instrument Sans';color:oklch(0.84 0.15 158);cursor:pointer;padding:0">detalhar →</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="3">
+                <div style="display:flex;flex-direction:column;gap:9px">
+                  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+                    <span style="font:600 11.5px/1 'Instrument Sans';color:oklch(0.94 0.015 168)">{{ g.nome }}</span>
+                    <span style="font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ g.realFmt }} · {{ g.pctRenda }} da renda</span>
+                  </div>
+                  <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px;background:rgba(255,255,255,.07)">
+                    <sc-for list="{{ g.cats }}" as="c" hint-placeholder-count="4">
+                      <div title="{{ c.nome }}" style="width:{{ c.wGrupo }};background:{{ c.cor }}"></div>
+                    </sc-for>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px">
+                    <sc-for list="{{ g.cats }}" as="c" hint-placeholder-count="4">
+                      <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.05);border-radius:20px;padding:5px 10px 5px 8px;font:400 10.5px/1 'Instrument Sans';color:oklch(0.90 0.02 168)">
+                        <i style="width:7px;height:7px;border-radius:2px;display:block;background:{{ c.cor }}"></i>{{ c.nome }}
+                        <b style="font:500 10.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums">{{ c.realFmt }}</b>
+                        <b style="font:400 9.5px/1 'IBM Plex Mono';color:{{ c.pctCor }}">{{ c.pctOrc }}</b>
+                      </span>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;overflow:hidden">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;padding:17px 18px 13px">
+              <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Últimos lançamentos</h2>
+              <button onClick="{{ goLanc }}" style="border:none;background:none;font:500 10.5px/1 'Instrument Sans';color:oklch(0.84 0.15 158);cursor:pointer;padding:0">todos →</button>
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+              <tbody>
+                <sc-for list="{{ ultimos }}" as="t" hint-placeholder-count="6">
+                  <tr style="border-top:1px solid rgba(255,255,255,.07)" style-hover="background:rgba(255,255,255,.05)">
+                    <td style="padding:10px 18px;font:400 11px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168);width:56px">{{ t.data }}</td>
+                    <td style="padding:10px 8px;font:500 11.5px/1.2 'Instrument Sans'">{{ t.desc }}</td>
+                    <td style="padding:10px 8px;width:150px"><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px/1 'Instrument Sans';color:oklch(0.86 0.02 168)"><i style="width:7px;height:7px;border-radius:2px;display:block;background:{{ t.catCor }}"></i>{{ t.cat }}</span></td>
+                    <td style="padding:10px 8px;width:118px;font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ t.metodo }}</td>
+                    <td style="padding:10px 18px 10px 8px;width:118px;text-align:right;font:500 12px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;color:{{ t.cor }}">{{ t.valorFmt }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:13px">
+              <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Vence em 7 dias</h2>
+              <span style="font:500 10.5px/1 'IBM Plex Mono';color:oklch(0.80 0.14 45)">{{ due7Total }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ due7 }}" as="b" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:11px;border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04);border-radius:13px;padding:10px 11px">
+                  <div style="width:34px;flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;border-right:1px solid rgba(255,255,255,.10);padding-right:9px">
+                    <span style="font:600 14px/1 'Instrument Sans'">{{ b.dia }}</span>
+                    <span style="font:400 8.5px/1 'IBM Plex Mono';color:oklch(0.76 0.03 168)">ago</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:4px;min-width:0;flex:1">
+                    <span style="font:500 11.5px/1 'Instrument Sans';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ b.nome }}</span>
+                    <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ b.tags }}</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+                    <span style="font:500 11.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums">{{ b.valorFmt }}</span>
+                    <button onClick="{{ b.onPay }}" style="border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);border-radius:7px;padding:4px 8px;font:500 9.5px/1 'Instrument Sans';color:oklch(0.90 0.02 168);cursor:pointer" style-hover="border-color:oklch(0.84 0.15 158);color:oklch(0.88 0.14 158)">{{ b.acao }}</button>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px">
+            <h2 style="margin:0 0 4px;font:600 13.5px/1 'Instrument Sans'">Para onde vai a renda</h2>
+            <p style="margin:0 0 15px;font:400 10.5px/1.35 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ comprometidoNota }}</p>
+            <div style="display:flex;height:28px;border-radius:9px;overflow:hidden;gap:2px;margin-bottom:13px">
+              <sc-for list="{{ comprometido }}" as="s" hint-placeholder-count="5">
+                <div title="{{ s.nome }}" style="width:{{ s.w }};background:{{ s.cor }}"></div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <sc-for list="{{ comprometido }}" as="s" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <i style="width:8px;height:8px;border-radius:2px;flex:none;display:block;background:{{ s.cor }}"></i>
+                  <span style="font:400 11px/1 'Instrument Sans';flex:1">{{ s.nome }}</span>
+                  <span style="font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ s.pct }}</span>
+                  <span style="font:500 11px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;width:84px;text-align:right">{{ s.valorFmt }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px">
+              <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Saldos em conta</h2>
+              <span style="font:500 10.5px/1 'IBM Plex Mono';color:oklch(0.84 0.13 158)">{{ saldoTotal }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <sc-for list="{{ contas }}" as="a" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:11px;padding:10px 0;border-top:1px solid rgba(255,255,255,.07)">
+                  <div style="width:24px;height:24px;border-radius:8px;flex:none;display:grid;place-items:center;font:600 9px/1 'IBM Plex Mono';color:oklch(0.20 0.03 168);background:{{ a.cor }}">{{ a.ini }}</div>
+                  <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                    <span style="font:500 11.5px/1 'Instrument Sans'">{{ a.nome }}</span>
+                    <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.76 0.03 168)">{{ a.tag }}</span>
+                  </div>
+                  <span style="font:500 11.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums">{{ a.valorFmt }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position:fixed;inset:0;background:rgba(6,18,14,.60);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:grid;place-items:center;z-index:40;padding:32px">
+        <div style="width:680px;max-width:100%;background:rgba(34,50,44,.88);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px);border:1px solid rgba(255,255,255,.14);border-radius:22px;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:17px 20px;border-bottom:1px solid rgba(255,255,255,.10)">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <h2 style="margin:0;font:600 15px/1 'Instrument Sans'">Novo lançamento</h2>
+              <span style="font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">receita, despesa ou aporte</span>
+            </div>
+            <button onClick="{{ closeModal }}" style="width:30px;height:30px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:10px;font:400 14px/1 'IBM Plex Mono';color:oklch(0.90 0.02 168);cursor:pointer" style-hover="background:rgba(255,255,255,.14)">×</button>
+          </div>
+          <div style="padding:18px 20px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;gap:2px;background:rgba(255,255,255,.06);border-radius:12px;padding:3px">
+              <sc-for list="{{ tipoOpts }}" as="o" hint-placeholder-count="3">
+                <button onClick="{{ o.onClick }}" style="flex:1;border:none;border-radius:10px;padding:10px;font:600 12px/1 'Instrument Sans';cursor:pointer;background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</button>
+              </sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Valor</span>
+                <div style="display:flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.05);border-radius:12px;padding:11px 12px">
+                  <span style="font:400 13px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">R$</span>
+                  <input placeholder="0,00" value="{{ novoV.valor }}" onChange="{{ onNovoValor }}" style="border:none;outline:none;background:none;font:500 22px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;width:100%;letter-spacing:-.02em;color:oklch(0.96 0.012 168)">
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Descrição</span>
+                <input placeholder="ex. mercado da esquina" value="{{ novoV.desc }}" onChange="{{ onNovoDesc }}" style="border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.05);border-radius:12px;padding:13px 12px;outline:none;font:400 12.5px/1 'Instrument Sans';color:oklch(0.96 0.012 168)">
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Categoria</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ catOpts }}" as="c" hint-placeholder-count="11">
+                  <button onClick="{{ c.onClick }}" style="display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:7px 11px 7px 9px;font:500 11px/1 'Instrument Sans';cursor:pointer;border:1px solid {{ c.borda }};background:{{ c.bg }};color:{{ c.fg }}">
+                    <i style="width:7px;height:7px;border-radius:2px;display:block;background:{{ c.cor }}"></i>{{ c.nome }}
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Meio de pagamento</span>
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                  <sc-for list="{{ metodoOpts }}" as="m" hint-placeholder-count="5">
+                    <button onClick="{{ m.onClick }}" style="border-radius:10px;padding:8px 11px;font:500 11px/1 'Instrument Sans';cursor:pointer;border:1px solid {{ m.borda }};background:{{ m.bg }};color:{{ m.fg }}">{{ m.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Conta / cartão</span>
+                <div style="display:flex;flex-wrap:wrap;gap:6px">
+                  <sc-for list="{{ contaOpts }}" as="a" hint-placeholder-count="5">
+                    <button onClick="{{ a.onClick }}" style="border-radius:10px;padding:8px 11px;font:500 11px/1 'Instrument Sans';cursor:pointer;border:1px solid {{ a.borda }};background:{{ a.bg }};color:{{ a.fg }}">{{ a.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:14px;align-items:end">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Data</span>
+                <input value="{{ novoV.data }}" onChange="{{ onNovoData }}" style="border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.05);border-radius:12px;padding:11px 12px;outline:none;font:400 12px/1 'IBM Plex Mono';color:oklch(0.96 0.012 168)">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Parcelas</span>
+                <input value="{{ novoV.parcelas }}" onChange="{{ onNovoParc }}" style="border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.05);border-radius:12px;padding:11px 12px;outline:none;font:400 12px/1 'IBM Plex Mono';color:oklch(0.96 0.012 168)">
+              </div>
+              <button onClick="{{ toggleRec }}" style="display:flex;align-items:center;gap:10px;border:1px solid {{ novoV.recBorda }};background:rgba(255,255,255,.05);border-radius:12px;padding:11px 12px;cursor:pointer;text-align:left">
+                <span style="width:28px;height:16px;border-radius:9px;flex:none;position:relative;background:{{ novoV.recTrack }}"><i style="position:absolute;top:2px;width:12px;height:12px;border-radius:50%;background:oklch(0.22 0.04 168);display:block;left:{{ novoV.recX }}"></i></span>
+                <span style="font:500 11px/1 'Instrument Sans';color:oklch(0.92 0.02 168)">Repetir todo mês</span>
+              </button>
+            </div>
+            <p style="margin:0;font:400 10.5px/1.45 'IBM Plex Mono';color:oklch(0.86 0.02 168);background:rgba(255,255,255,.05);border-radius:12px;padding:12px 13px">{{ novoV.previa }}</p>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 20px;border-top:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03)">
+            <span style="font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ novoV.dica }}</span>
+            <div style="display:flex;gap:8px">
+              <button onClick="{{ closeModal }}" style="border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:12px;padding:11px 16px;font:500 12px/1 'Instrument Sans';color:oklch(0.90 0.02 168);cursor:pointer">Cancelar</button>
+              <button onClick="{{ salvar }}" style="border:none;border-radius:12px;background:linear-gradient(135deg,oklch(0.86 0.17 155),oklch(0.74 0.15 172));color:oklch(0.22 0.05 168);font:600 12px/1 'Instrument Sans';padding:11px 20px;cursor:pointer" style-hover="filter:brightness(1.08)">Salvar lançamento</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isLanc }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <div style="display:flex;gap:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);border-radius:13px;padding:3px">
+          <sc-for list="{{ filtroTipo }}" as="f" hint-placeholder-count="4">
+            <button onClick="{{ f.onClick }}" style="border:none;border-radius:10px;padding:7px 13px;font:500 11.5px/1 'Instrument Sans';cursor:pointer;background:{{ f.bg }};color:{{ f.fg }}">{{ f.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);border-radius:13px;padding:3px">
+          <sc-for list="{{ filtroMetodo }}" as="f" hint-placeholder-count="5">
+            <button onClick="{{ f.onClick }}" style="border:none;border-radius:10px;padding:7px 13px;font:500 11.5px/1 'Instrument Sans';cursor:pointer;background:{{ f.bg }};color:{{ f.fg }}">{{ f.label }}</button>
+          </sc-for>
+        </div>
+        <span style="margin-left:auto;font:400 11px/1 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ lancResumo }}</span>
+      </div>
+      <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:rgba(255,255,255,.05)">
+              <th style="text-align:left;padding:11px 18px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:64px">Data</th>
+              <th style="text-align:left;padding:11px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168)">Descrição</th>
+              <th style="text-align:left;padding:11px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:150px">Categoria</th>
+              <th style="text-align:left;padding:11px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:104px">Método</th>
+              <th style="text-align:left;padding:11px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:154px">Conta / cartão</th>
+              <th style="text-align:center;padding:11px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:60px">Parc.</th>
+              <th style="text-align:left;padding:11px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:96px">Status</th>
+              <th style="text-align:right;padding:11px 18px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:120px">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <sc-for list="{{ lancamentos }}" as="t" hint-placeholder-count="12">
+              <tr style="border-top:1px solid rgba(255,255,255,.07)" style-hover="background:rgba(255,255,255,.05)">
+                <td style="padding:11px 18px;font:400 11px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ t.data }}</td>
+                <td style="padding:11px 8px;font:500 11.5px/1.2 'Instrument Sans'">{{ t.desc }}</td>
+                <td style="padding:11px 8px"><span style="display:inline-flex;align-items:center;gap:6px;font:400 10.5px/1 'Instrument Sans';color:oklch(0.88 0.02 168);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:4px 9px 4px 7px"><i style="width:7px;height:7px;border-radius:2px;display:block;background:{{ t.catCor }}"></i>{{ t.cat }}</span></td>
+                <td style="padding:11px 8px;font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.82 0.025 168)">{{ t.metodo }}</td>
+                <td style="padding:11px 8px;font:400 10.5px/1 'Instrument Sans';color:oklch(0.82 0.025 168)">{{ t.conta }}</td>
+                <td style="padding:11px 8px;text-align:center;font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ t.parc }}</td>
+                <td style="padding:11px 8px"><span style="font:500 9.5px/1 'Instrument Sans';border-radius:6px;padding:4px 8px;background:{{ t.stBg }};color:{{ t.stFg }}">{{ t.status }}</span></td>
+                <td style="padding:11px 18px;text-align:right;white-space:nowrap;font:500 12px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;color:{{ t.cor }}">{{ t.valorFmt }}</td>
+              </tr>
+            </sc-for>
+          </tbody>
+          <tfoot>
+            <tr style="background:rgba(255,255,255,.06);border-top:1px solid rgba(255,255,255,.12)">
+              <td colspan="6" style="padding:12px 18px;font:500 11px/1 'Instrument Sans';color:oklch(0.84 0.02 168)">{{ lancFooter }}</td>
+              <td style="padding:12px 8px;font:400 10px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">saldo</td>
+              <td style="padding:12px 18px;text-align:right;font:600 12.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;color:oklch(0.88 0.15 158)">{{ lancSaldo }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isContas }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:16px 17px;display:flex;flex-direction:column;gap:8px">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Total do mês</span>
+          <span style="font:600 25px/1 'Instrument Sans';letter-spacing:-.03em;font-variant-numeric:tabular-nums">{{ billStats.total }}</span>
+          <span style="font:400 10px/1.3 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ billStats.qtd }}</span>
+        </div>
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:16px 17px;display:flex;flex-direction:column;gap:8px">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Pagas</span>
+          <span style="font:600 25px/1 'Instrument Sans';letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:oklch(0.88 0.15 158)">{{ billStats.pagas }}</span>
+          <div style="height:6px;border-radius:3px;background:rgba(255,255,255,.10);overflow:hidden"><div style="height:100%;background:oklch(0.84 0.16 158);width:{{ billStats.pagasPct }}"></div></div>
+          <span style="font:400 10px/1.3 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ billStats.pagasQtd }}</span>
+        </div>
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:16px 17px;display:flex;flex-direction:column;gap:8px">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Em aberto</span>
+          <span style="font:600 25px/1 'Instrument Sans';letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:oklch(0.84 0.14 45)">{{ billStats.aberto }}</span>
+          <span style="font:400 10px/1.3 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ billStats.abertoNota }}</span>
+        </div>
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:16px 17px;display:flex;flex-direction:column;gap:8px">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Fixas / variáveis</span>
+          <span style="font:600 25px/1 'Instrument Sans';letter-spacing:-.03em;font-variant-numeric:tabular-nums">{{ billStats.fixVar }}</span>
+          <div style="display:flex;height:6px;border-radius:3px;overflow:hidden;gap:2px">
+            <div style="background:oklch(0.76 0.13 200);width:{{ billStats.fixPct }}"></div>
+            <div style="background:oklch(0.82 0.14 55);flex:1"></div>
+          </div>
+          <span style="font:400 10px/1.3 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ billStats.fixFmt }} · {{ billStats.varFmt }}</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start">
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:15px">
+            <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Calendário · agosto 2026</h2>
+            <div style="display:flex;gap:2px;background:rgba(255,255,255,.06);border-radius:11px;padding:3px">
+              <sc-for list="{{ filtroBill }}" as="f" hint-placeholder-count="3">
+                <button onClick="{{ f.onClick }}" style="border:none;border-radius:9px;padding:6px 11px;font:500 10.5px/1 'Instrument Sans';cursor:pointer;background:{{ f.bg }};color:{{ f.fg }}">{{ f.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:6px">
+            <sc-for list="{{ semana }}" as="d" hint-placeholder-count="7">
+              <span style="font:600 9px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.74 0.03 168);text-align:center">{{ d }}</span>
+            </sc-for>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px">
+            <sc-for list="{{ diasMes }}" as="d" hint-placeholder-count="42">
+              <div style="min-height:84px;border-radius:11px;padding:6px;display:flex;flex-direction:column;gap:4px;border:1px solid {{ d.borda }};background:{{ d.bg }}">
+                <span style="font:500 10px/1 'IBM Plex Mono';color:{{ d.numCor }}">{{ d.num }}</span>
+                <sc-for list="{{ d.bills }}" as="b" hint-placeholder-count="0">
+                  <button onClick="{{ b.onPay }}" style="border:none;text-align:left;border-radius:7px;padding:4px 6px;cursor:pointer;display:flex;flex-direction:column;gap:2px;background:{{ b.pillBg }}" style-hover="filter:brightness(1.2)">
+                    <span style="font:500 9px/1.15 'Instrument Sans';color:{{ b.pillFg }};text-decoration:{{ b.risco }}">{{ b.nome }}</span>
+                    <span style="font:400 8.5px/1 'IBM Plex Mono';color:{{ b.pillFg2 }}">{{ b.mini }}</span>
+                  </button>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:14px;font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">
+            <span style="display:flex;align-items:center;gap:5px"><i style="width:8px;height:8px;border-radius:2px;background:rgba(125,211,252,.6);display:block"></i>fixa</span>
+            <span style="display:flex;align-items:center;gap:5px"><i style="width:8px;height:8px;border-radius:2px;background:rgba(253,186,116,.7);display:block"></i>variável</span>
+            <span style="display:flex;align-items:center;gap:5px"><i style="width:8px;height:8px;border-radius:2px;background:rgba(134,239,172,.7);display:block"></i>paga</span>
+            <span>clique para alternar paga / em aberto</span>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;overflow:hidden">
+          <div style="padding:17px 18px 13px">
+            <h2 style="margin:0 0 4px;font:600 13.5px/1 'Instrument Sans'">Contas do mês</h2>
+            <p style="margin:0;font:400 10.5px/1.35 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ billStats.abertoNota }}</p>
+          </div>
+          <sc-for list="{{ billsList }}" as="b" hint-placeholder-count="12">
+            <div style="display:flex;align-items:center;gap:11px;padding:10px 18px;border-top:1px solid rgba(255,255,255,.07)" style-hover="background:rgba(255,255,255,.05)">
+              <button onClick="{{ b.onPay }}" style="width:17px;height:17px;flex:none;border-radius:6px;cursor:pointer;display:grid;place-items:center;font:600 9px/1 'IBM Plex Mono';border:1.5px solid {{ b.boxBorda }};background:{{ b.boxBg }};color:oklch(0.20 0.03 168)">{{ b.check }}</button>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:500 11.5px/1 'Instrument Sans';color:{{ b.nomeCor }};text-decoration:{{ b.risco }}">{{ b.nome }}</span>
+                <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.76 0.03 168)">{{ b.sub }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                <span style="font:500 11.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;color:{{ b.nomeCor }}">{{ b.valorFmt }}</span>
+                <div style="display:flex;align-items:center;gap:5px">
+                  <span style="font:400 9px/1 'Instrument Sans';color:{{ b.tagCor }}">{{ b.tag }}</span>
+                  <span style="font:500 8.5px/1 'Instrument Sans';border-radius:5px;padding:3px 6px;background:{{ b.stBg }};color:{{ b.stFg }}">{{ b.statusLabel }}</span>
+                </div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCartoes }}" hint-placeholder-val="{{ false }}">
+      <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:14px 18px;display:flex;align-items:center;gap:14px">
+        <span style="width:9px;height:9px;border-radius:3px;flex:none;display:block;background:oklch(0.84 0.14 45)"></span>
+        <p style="margin:0;font:400 11.5px/1.5 'Instrument Sans';color:oklch(0.90 0.02 168)">{{ cardsResumo }}</p>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start">
+        <sc-for list="{{ cards }}" as="c" hint-placeholder-count="3">
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;overflow:hidden;display:flex;flex-direction:column">
+            <div style="padding:18px;display:flex;flex-direction:column;gap:16px;border-bottom:1px solid rgba(255,255,255,.08)">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="width:32px;height:22px;border-radius:6px;flex:none;background:{{ c.cor }}"></div>
+                  <div style="display:flex;flex-direction:column;gap:3px">
+                    <span style="font:600 13px/1.1 'Instrument Sans'">{{ c.nome }}</span>
+                    <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ c.bandeira }}</span>
+                  </div>
+                </div>
+                <span style="font:500 9.5px/1 'Instrument Sans';border-radius:7px;padding:5px 8px;white-space:nowrap;background:{{ c.pagaBg }};color:{{ c.pagaFg }}">{{ c.pagaLabel }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <span style="font:600 9px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Fatura atual</span>
+                <span style="font:600 27px/1 'Instrument Sans';letter-spacing:-.035em;font-variant-numeric:tabular-nums">{{ c.faturaFmt }}</span>
+                <span style="font:400 10px/1.35 'IBM Plex Mono';color:oklch(0.80 0.025 168)">+ {{ c.previstoFmt }} previstos → estimada {{ c.estFmt }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:9px 10px;display:flex;flex-direction:column;gap:4px">
+                  <span style="font:600 8.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.76 0.03 168)">Fecha</span>
+                  <span style="font:600 12px/1 'Instrument Sans'">{{ c.fecha }}</span>
+                </div>
+                <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:9px 10px;display:flex;flex-direction:column;gap:4px">
+                  <span style="font:600 8.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.76 0.03 168)">Vence</span>
+                  <span style="font:600 12px/1 'Instrument Sans'">{{ c.vence }}</span>
+                </div>
+                <div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:11px;padding:9px 10px;display:flex;flex-direction:column;gap:4px">
+                  <span style="font:600 8.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.76 0.03 168)">Melhor dia</span>
+                  <span style="font:600 12px/1 'Instrument Sans'">{{ c.melhor }}</span>
+                </div>
+              </div>
+            </div>
+            <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px;flex:1">
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div style="display:flex;justify-content:space-between;font:400 10px/1 'IBM Plex Mono';color:oklch(0.80 0.025 168)">
+                  <span>limite usado</span><span>{{ c.usoPct }} de {{ c.limiteFmt }}</span>
+                </div>
+                <div style="height:8px;border-radius:4px;background:rgba(255,255,255,.10);overflow:hidden;display:flex">
+                  <div style="width:{{ c.wLanc }};background:{{ c.usoCor }}"></div>
+                  <div style="width:{{ c.wPrev }};background:rgba(255,255,255,.26)"></div>
+                </div>
+                <span style="font:400 10px/1 'IBM Plex Mono';color:oklch(0.80 0.025 168)">disponível {{ c.dispFmt }} · {{ c.diasFecha }}</span>
+              </div>
+              <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:12px;display:flex;flex-direction:column;gap:9px">
+                <span style="font:600 9px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Parcelas em andamento</span>
+                <sc-for list="{{ c.parcelas }}" as="p" hint-placeholder-count="2">
+                  <div style="display:flex;flex-direction:column;gap:5px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="font:400 11px/1 'Instrument Sans';flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.desc }}</span>
+                      <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ p.p }}</span>
+                      <span style="font:500 11px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums">{{ p.valorFmt }}</span>
+                    </div>
+                    <div style="height:4px;border-radius:2px;background:rgba(255,255,255,.10);overflow:hidden"><div style="height:100%;width:{{ p.w }};background:oklch(0.76 0.13 210)"></div></div>
+                  </div>
+                </sc-for>
+                <span style="font:400 10px/1.35 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ c.parcNota }}</span>
+              </div>
+              <div style="border-top:1px solid rgba(255,255,255,.08);padding-top:12px;display:flex;flex-direction:column;gap:8px">
+                <span style="font:600 9px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Ainda vai cair nesta fatura</span>
+                <sc-for list="{{ c.recItens }}" as="i" hint-placeholder-count="2">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <i style="width:7px;height:7px;border-radius:2px;flex:none;display:block;background:{{ i.cor }}"></i>
+                    <span style="font:400 10.5px/1 'Instrument Sans';flex:1;color:oklch(0.88 0.02 168)">{{ i.nome }}</span>
+                    <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.76 0.03 168)">{{ i.dia }}</span>
+                    <span style="font:500 10.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums">{{ i.valorFmt }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <button onClick="{{ c.onPagar }}" style="margin-top:auto;border:1px solid rgba(255,255,255,.11);border-radius:12px;padding:11px;font:600 11.5px/1 'Instrument Sans';cursor:pointer;background:{{ c.btnBg }};color:{{ c.btnFg }}" style-hover="filter:brightness(1.1)">{{ c.btnLabel }}</button>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCat }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:1fr 330px;gap:16px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:15px">
+              <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Onde o dinheiro foi</h2>
+              <span style="font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ catTotal.real }} · {{ catTotal.pct }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <sc-for list="{{ gruposDetalhe }}" as="g" hint-placeholder-count="3">
+                <div style="border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04);border-radius:15px;overflow:hidden">
+                  <button onClick="{{ g.onClick }}" style="width:100%;border:none;background:none;cursor:pointer;padding:13px 15px;display:flex;align-items:center;gap:12px;text-align:left" style-hover="background:rgba(255,255,255,.05)">
+                    <span style="width:20px;height:20px;flex:none;border-radius:7px;display:grid;place-items:center;font:600 12px/1 'IBM Plex Mono';background:rgba(255,255,255,.10);color:oklch(0.92 0.02 168)">{{ g.sinal }}</span>
+                    <i style="width:9px;height:9px;border-radius:3px;flex:none;display:block;background:{{ g.cor }}"></i>
+                    <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                      <span style="font:600 12px/1 'Instrument Sans';color:oklch(0.96 0.012 168)">{{ g.nome }}</span>
+                      <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ g.qtd }} · {{ g.pctSaidas }}</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                      <span style="font:600 13px/1 'Instrument Sans';font-variant-numeric:tabular-nums">{{ g.realFmt }}</span>
+                      <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ g.pctRenda }} da renda</span>
+                    </div>
+                  </button>
+                  <sc-if value="{{ g.aberto }}" hint-placeholder-val="{{ true }}">
+                    <div style="padding:0 15px 14px;display:flex;flex-direction:column;gap:10px">
+                      <sc-for list="{{ g.itens }}" as="c" hint-placeholder-count="5">
+                        <div style="display:grid;grid-template-columns:160px 1fr 58px 66px 100px;align-items:center;gap:11px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07)">
+                          <div style="display:flex;align-items:center;gap:8px;min-width:0">
+                            <i style="width:8px;height:8px;border-radius:2px;flex:none;display:block;background:{{ c.cor }}"></i>
+                            <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                              <span style="font:500 11.5px/1 'Instrument Sans';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.nome }}</span>
+                              <span style="font:400 9px/1 'IBM Plex Mono';color:oklch(0.74 0.03 168)">{{ c.meio }} · {{ c.qtdFmt }}</span>
+                            </div>
+                          </div>
+                          <div style="height:7px;border-radius:4px;background:rgba(255,255,255,.10);overflow:hidden"><div style="height:100%;border-radius:4px;width:{{ c.barra }};background:{{ c.cor }}"></div></div>
+                          <span style="font:400 10.5px/1 'IBM Plex Mono';text-align:right;color:oklch(0.82 0.025 168)">{{ c.pctGrupo }}</span>
+                          <span style="font:400 9.5px/1 'IBM Plex Mono';text-align:right;color:oklch(0.74 0.03 168)">{{ c.mediaFmt }}</span>
+                          <span style="font:500 11.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;text-align:right">{{ c.realFmt }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;overflow:hidden">
+            <div style="padding:17px 18px 13px"><h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Todas as categorias</h2></div>
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="background:rgba(255,255,255,.05)">
+                  <th style="text-align:left;padding:10px 18px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168)">Categoria</th>
+                  <th style="text-align:left;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:140px">Grupo</th>
+                  <th style="text-align:left;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:118px">Meio usado</th>
+                  <th style="text-align:right;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:80px">Lanç.</th>
+                  <th style="text-align:right;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:100px">Ticket médio</th>
+                  <th style="text-align:left;padding:10px 14px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:170px">Participação</th>
+                  <th style="text-align:right;padding:10px 18px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:110px">Gasto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ categorias }}" as="c" hint-placeholder-count="11">
+                  <tr style="border-top:1px solid rgba(255,255,255,.07)" style-hover="background:rgba(255,255,255,.05)">
+                    <td style="padding:11px 18px"><span style="display:inline-flex;align-items:center;gap:8px;font:500 11.5px/1 'Instrument Sans'"><i style="width:9px;height:9px;border-radius:3px;display:block;background:{{ c.cor }}"></i>{{ c.nome }}</span></td>
+                    <td style="padding:11px 8px;font:400 10.5px/1 'Instrument Sans';color:oklch(0.80 0.025 168)">{{ c.grupo }}</td>
+                    <td style="padding:11px 8px;font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ c.meio }}</td>
+                    <td style="padding:11px 8px;text-align:right;font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ c.qtdFmt }}</td>
+                    <td style="padding:11px 8px;text-align:right;font:400 11px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;color:oklch(0.82 0.025 168)">{{ c.mediaFmt }}</td>
+                    <td style="padding:11px 14px">
+                      <div style="display:flex;align-items:center;gap:9px">
+                        <div style="flex:1;height:7px;border-radius:4px;background:rgba(255,255,255,.10);overflow:hidden"><div style="height:100%;border-radius:4px;width:{{ c.barra }};background:{{ c.cor }}"></div></div>
+                        <span style="font:400 10px/1 'IBM Plex Mono';width:40px;text-align:right;color:oklch(0.82 0.025 168)">{{ c.pctTotal }}</span>
+                      </div>
+                    </td>
+                    <td style="padding:11px 18px;text-align:right;font:500 11.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums">{{ c.realFmt }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+              <tfoot>
+                <tr style="background:rgba(255,255,255,.06);border-top:1px solid rgba(255,255,255,.12)">
+                  <td colspan="2" style="padding:12px 18px;font:600 11.5px/1 'Instrument Sans'">Total</td>
+                  <td colspan="3" style="padding:12px 8px;font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.82 0.025 168)">{{ catTotal.qtd }}</td>
+                  <td style="padding:12px 14px;font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.82 0.025 168)">{{ catTotal.pct }}</td>
+                  <td style="padding:12px 18px;text-align:right;font:600 12.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums">{{ catTotal.real }}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between">
+              <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Nova categoria</h2>
+              <span style="font:400 10px/1 'IBM Plex Mono';color:oklch(0.76 0.03 168)">{{ catCount }} cadastradas</span>
+            </div>
+            <input placeholder="Nome da categoria" value="{{ novaCatV.nome }}" onChange="{{ onCatNome }}" style="border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.05);border-radius:12px;padding:11px 12px;outline:none;font:400 12.5px/1 'Instrument Sans';color:oklch(0.96 0.012 168)">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Grupo</span>
+              <div style="display:flex;flex-wrap:wrap;gap:6px">
+                <sc-for list="{{ grupoOpts }}" as="g" hint-placeholder-count="3">
+                  <button onClick="{{ g.onClick }}" style="border-radius:10px;padding:7px 11px;font:500 10.5px/1 'Instrument Sans';cursor:pointer;border:1px solid {{ g.borda }};background:{{ g.bg }};color:{{ g.fg }}">{{ g.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Cor</span>
+              <div style="display:flex;gap:7px;flex-wrap:wrap">
+                <sc-for list="{{ paleta }}" as="p" hint-placeholder-count="8">
+                  <button onClick="{{ p.onClick }}" style="width:26px;height:26px;border-radius:9px;cursor:pointer;background:{{ p.cor }};border:2px solid {{ p.borda }}"></button>
+                </sc-for>
+              </div>
+            </div>
+            <p style="margin:0;font:400 10.5px/1.45 'IBM Plex Mono';color:oklch(0.84 0.02 168);background:rgba(255,255,255,.05);border-radius:11px;padding:11px 12px">{{ novaCatV.previa }}</p>
+            <button onClick="{{ salvarCat }}" style="border:none;border-radius:12px;font:600 12px/1 'Instrument Sans';padding:12px;cursor:pointer;background:{{ novaCatV.btnBg }};color:{{ novaCatV.btnFg }}">Criar categoria</button>
+          </div>
+
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:15px">
+            <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Composição das saídas</h2>
+            <div style="display:flex;justify-content:center;padding:4px 0">
+              <div style="width:172px;height:172px;border-radius:50%;position:relative;background:{{ donut }}">
+                <div style="position:absolute;inset:34px;border-radius:50%;background:oklch(0.23 0.035 168);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">
+                  <span style="font:600 9px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Saídas</span>
+                  <span style="font:600 15px/1 'Instrument Sans';font-variant-numeric:tabular-nums">{{ catTotal.real }}</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <sc-for list="{{ categorias }}" as="c" hint-placeholder-count="11">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <i style="width:8px;height:8px;border-radius:2px;flex:none;display:block;background:{{ c.cor }}"></i>
+                  <span style="font:400 11px/1 'Instrument Sans';flex:1">{{ c.nome }}</span>
+                  <span style="font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ c.pctTotal }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRec }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:16px 17px;display:flex;flex-direction:column;gap:8px">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Assinaturas / mês</span>
+          <span style="font:600 26px/1 'Instrument Sans';letter-spacing:-.035em;font-variant-numeric:tabular-nums">{{ recStats.assinaturas }}</span>
+          <span style="font:400 10.5px/1.3 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ recStats.assinaturasQtd }}</span>
+        </div>
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:16px 17px;display:flex;flex-direction:column;gap:8px">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Parcelas / mês</span>
+          <span style="font:600 26px/1 'Instrument Sans';letter-spacing:-.035em;font-variant-numeric:tabular-nums">{{ recStats.parcelas }}</span>
+          <span style="font:400 10.5px/1.3 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ recStats.parcelasQtd }}</span>
+        </div>
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:16px 17px;display:flex;flex-direction:column;gap:8px">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Já na fatura</span>
+          <span style="font:600 26px/1 'Instrument Sans';letter-spacing:-.035em;font-variant-numeric:tabular-nums;color:oklch(0.88 0.15 158)">{{ recStats.lancado }}</span>
+          <span style="font:400 10.5px/1.3 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ recStats.lancadoQtd }}</span>
+        </div>
+        <div style="background:linear-gradient(140deg,oklch(0.88 0.17 155),oklch(0.74 0.15 172));border-radius:20px;padding:16px 17px;display:flex;flex-direction:column;gap:8px;color:oklch(0.22 0.05 168)">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;opacity:.72">Previsto até fechar</span>
+          <span style="font:600 26px/1 'Instrument Sans';letter-spacing:-.035em;font-variant-numeric:tabular-nums">{{ recStats.previsto }}</span>
+          <span style="font:400 10.5px/1.3 'IBM Plex Mono';opacity:.78">{{ recStats.previstoQtd }}</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:16px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:5px">
+              <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Linha do tempo do faturamento</h2>
+              <span style="font:400 10px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">agosto · hoje dia 01</span>
+            </div>
+            <p style="margin:0 0 16px;font:400 10.5px/1.4 'IBM Plex Mono';color:oklch(0.78 0.025 168)">cheio = já lançado · transparente = entra no dia da cobrança</p>
+            <div style="display:grid;grid-template-columns:repeat(31,1fr);gap:2px;align-items:end">
+              <sc-for list="{{ timeline }}" as="d" hint-placeholder-count="31">
+                <div style="display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-height:78px;border-radius:8px;padding:4px 0;background:{{ d.bg }};border:1px solid {{ d.borda }}">
+                  <sc-for list="{{ d.marks }}" as="m" hint-placeholder-count="0">
+                    <i style="width:9px;height:9px;border-radius:3px;display:block;background:{{ m.cor }};opacity:{{ m.op }}"></i>
+                  </sc-for>
+                  <span style="font:400 8.5px/1 'IBM Plex Mono';color:{{ d.numCor }}">{{ d.num }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <p style="margin:15px 0 0;font:400 10.5px/1.45 'IBM Plex Mono';color:oklch(0.86 0.02 168);background:rgba(255,255,255,.05);border-radius:11px;padding:11px 13px">{{ recStats.aviso }}</p>
+          </div>
+
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;overflow:hidden">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:17px 18px 13px">
+              <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Cobranças recorrentes</h2>
+              <div style="display:flex;gap:2px;background:rgba(255,255,255,.06);border-radius:11px;padding:3px">
+                <sc-for list="{{ filtroRec }}" as="r" hint-placeholder-count="3">
+                  <button onClick="{{ r.onClick }}" style="border:none;border-radius:9px;padding:6px 11px;font:500 10.5px/1 'Instrument Sans';cursor:pointer;background:{{ r.bg }};color:{{ r.fg }}">{{ r.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="background:rgba(255,255,255,.05)">
+                  <th style="text-align:left;padding:10px 18px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168)">Cobrança</th>
+                  <th style="text-align:left;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:92px">Tipo</th>
+                  <th style="text-align:left;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:150px">Cartão / meio</th>
+                  <th style="text-align:left;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:140px">Progresso</th>
+                  <th style="text-align:left;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:88px">Status</th>
+                  <th style="text-align:right;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:104px">Valor</th>
+                  <th style="text-align:right;padding:10px 18px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:76px">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ recRows }}" as="r" hint-placeholder-count="9">
+                  <tr style="border-top:1px solid rgba(255,255,255,.07);opacity:{{ r.opacidade }}" style-hover="background:rgba(255,255,255,.05)">
+                    <td style="padding:11px 18px">
+                      <div style="display:flex;align-items:center;gap:9px">
+                        <i style="width:9px;height:9px;border-radius:3px;flex:none;display:block;background:{{ r.catCor }}"></i>
+                        <div style="display:flex;flex-direction:column;gap:3px">
+                          <span style="font:500 11.5px/1 'Instrument Sans'">{{ r.nome }}</span>
+                          <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.76 0.03 168)">{{ r.cat }} · {{ r.dia }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="padding:11px 8px"><span style="font:500 9.5px/1 'Instrument Sans';border-radius:6px;padding:4px 8px;background:{{ r.tipoBg }};color:{{ r.tipoFg }}">{{ r.tipoLabel }}</span></td>
+                    <td style="padding:11px 8px;font:400 10.5px/1 'Instrument Sans';color:oklch(0.82 0.025 168)">{{ r.cartao }}</td>
+                    <td style="padding:11px 8px">
+                      <div style="display:flex;flex-direction:column;gap:5px">
+                        <div style="height:5px;border-radius:3px;background:rgba(255,255,255,.10);overflow:hidden"><div style="height:100%;border-radius:3px;width:{{ r.parcW }};background:{{ r.parcCor }}"></div></div>
+                        <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ r.parcLabel }} · {{ r.restaFmt }}</span>
+                      </div>
+                    </td>
+                    <td style="padding:11px 8px"><span style="font:500 9.5px/1 'Instrument Sans';border-radius:6px;padding:4px 8px;background:{{ r.stBg }};color:{{ r.stFg }}">{{ r.status }}</span></td>
+                    <td style="padding:11px 8px;text-align:right;white-space:nowrap;font:500 12px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums">{{ r.valorFmt }}</td>
+                    <td style="padding:11px 18px;text-align:right"><button onClick="{{ r.onToggle }}" style="border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.06);border-radius:9px;padding:5px 10px;font:500 10px/1 'Instrument Sans';color:oklch(0.90 0.02 168);cursor:pointer" style-hover="border-color:oklch(0.84 0.15 158);color:oklch(0.88 0.14 158)">{{ r.acao }}</button></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:14px">
+          <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Nova cobrança recorrente</h2>
+          <div style="display:flex;gap:2px;background:rgba(255,255,255,.06);border-radius:12px;padding:3px">
+            <sc-for list="{{ recTipoOpts }}" as="o" hint-placeholder-count="2">
+              <button onClick="{{ o.onClick }}" style="flex:1;border:none;border-radius:10px;padding:9px;font:600 11.5px/1 'Instrument Sans';cursor:pointer;background:{{ o.bg }};color:{{ o.fg }}">{{ o.label }}</button>
+            </sc-for>
+          </div>
+          <input placeholder="Nome da cobrança" value="{{ novoRecV.nome }}" onChange="{{ onRecNome }}" style="border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.05);border-radius:12px;padding:11px 12px;outline:none;font:400 12.5px/1 'Instrument Sans';color:oklch(0.96 0.012 168)">
+          <div style="display:grid;grid-template-columns:1.35fr 1fr 1fr;gap:8px">
+            <div style="display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.05);border-radius:12px;padding:10px 11px">
+              <span style="font:400 11px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">R$</span>
+              <input placeholder="0,00" value="{{ novoRecV.valor }}" onChange="{{ onRecValor }}" style="border:none;outline:none;background:none;font:500 13px/1 'IBM Plex Mono';width:100%;color:oklch(0.96 0.012 168)">
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.05);border-radius:12px;padding:10px 11px">
+              <span style="font:400 10px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">dia</span>
+              <input value="{{ novoRecV.dia }}" onChange="{{ onRecDia }}" style="border:none;outline:none;background:none;font:500 13px/1 'IBM Plex Mono';width:100%;color:oklch(0.96 0.012 168)">
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.11);background:rgba(255,255,255,.05);border-radius:12px;padding:10px 11px">
+              <span style="font:400 10px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">×</span>
+              <input value="{{ novoRecV.pt }}" onChange="{{ onRecPt }}" style="border:none;outline:none;background:none;font:500 13px/1 'IBM Plex Mono';width:100%;color:oklch(0.96 0.012 168)">
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Cartão / meio</span>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ recCartaoOpts }}" as="a" hint-placeholder-count="4">
+                <button onClick="{{ a.onClick }}" style="border-radius:10px;padding:7px 10px;font:500 10.5px/1 'Instrument Sans';cursor:pointer;border:1px solid {{ a.borda }};background:{{ a.bg }};color:{{ a.fg }}">{{ a.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Categoria</span>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ recCatOpts }}" as="c" hint-placeholder-count="11">
+                <button onClick="{{ c.onClick }}" style="display:inline-flex;align-items:center;gap:6px;border-radius:20px;padding:6px 11px 6px 8px;font:500 10.5px/1 'Instrument Sans';cursor:pointer;border:1px solid {{ c.borda }};background:{{ c.bg }};color:{{ c.fg }}">
+                  <i style="width:7px;height:7px;border-radius:2px;display:block;background:{{ c.cor }}"></i>{{ c.nome }}
+                </button>
+              </sc-for>
+            </div>
+          </div>
+          <p style="margin:0;font:400 10.5px/1.45 'IBM Plex Mono';color:oklch(0.84 0.02 168);background:rgba(255,255,255,.05);border-radius:11px;padding:11px 12px">{{ novoRecV.previa }}</p>
+          <button onClick="{{ salvarRec }}" style="border:none;border-radius:12px;background:linear-gradient(135deg,oklch(0.86 0.17 155),oklch(0.74 0.15 172));color:oklch(0.22 0.05 168);font:600 12px/1 'Instrument Sans';padding:12px;cursor:pointer" style-hover="filter:brightness(1.08)">Cadastrar recorrência</button>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isInvest }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+        <div style="background:linear-gradient(140deg,oklch(0.88 0.17 155),oklch(0.74 0.15 172));border-radius:20px;padding:17px 18px;display:flex;flex-direction:column;gap:9px;color:oklch(0.22 0.05 168)">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;opacity:.72">Carteira total</span>
+          <span style="font:600 29px/1 'Instrument Sans';letter-spacing:-.035em;font-variant-numeric:tabular-nums">{{ inv.total }}</span>
+          <span style="font:400 10.5px/1.35 'IBM Plex Mono';opacity:.80">aplicado {{ inv.aplicado }} · {{ inv.ganho }} ({{ inv.ganhoPct }})</span>
+        </div>
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:17px 18px;display:flex;flex-direction:column;gap:9px">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Rendimento do mês</span>
+          <span style="font:600 29px/1 'Instrument Sans';letter-spacing:-.035em;font-variant-numeric:tabular-nums;color:oklch(0.88 0.15 158)">{{ inv.rendMes }}</span>
+          <span style="font:400 10.5px/1.35 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ inv.rendMesPct }}</span>
+        </div>
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:17px 18px;display:flex;flex-direction:column;gap:9px">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Proventos recebidos</span>
+          <span style="font:600 29px/1 'Instrument Sans';letter-spacing:-.035em;font-variant-numeric:tabular-nums">{{ inv.prov }}</span>
+          <span style="font:400 10.5px/1.35 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ inv.provNota }}</span>
+        </div>
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:17px 18px;display:flex;flex-direction:column;gap:9px">
+          <span style="font:600 9.5px/1 'Instrument Sans';letter-spacing:.1em;text-transform:uppercase;color:oklch(0.78 0.03 168)">Aporte do mês</span>
+          <span style="font:600 29px/1 'Instrument Sans';letter-spacing:-.035em;font-variant-numeric:tabular-nums;color:oklch(0.82 0.12 210)">{{ inv.aporte }}</span>
+          <span style="font:400 10.5px/1.35 'IBM Plex Mono';color:oklch(0.80 0.025 168)">{{ inv.aporteNota }}</span>
+        </div>
+      </div>
+
+      <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:14px 18px;display:flex;align-items:center;gap:14px">
+        <span style="width:9px;height:9px;border-radius:3px;flex:none;display:block;background:oklch(0.84 0.16 158)"></span>
+        <p style="margin:0;font:400 11.5px/1.5 'Instrument Sans';color:oklch(0.90 0.02 168)">{{ notaInvest }}</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 330px;gap:16px;align-items:start">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:15px">
+              <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Alocação por segmento</h2>
+              <span style="font:400 10px/1 'IBM Plex Mono';color:oklch(0.78 0.025 168)">barra fina = alvo definido</span>
+            </div>
+            <div style="display:flex;height:24px;border-radius:8px;overflow:hidden;gap:2px;margin-bottom:6px">
+              <sc-for list="{{ segmentos }}" as="s" hint-placeholder-count="6">
+                <div title="{{ s.nome }}" style="width:{{ s.w }};background:{{ s.cor }}"></div>
+              </sc-for>
+            </div>
+            <div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:2px;margin-bottom:18px;opacity:.5">
+              <sc-for list="{{ segmentos }}" as="s" hint-placeholder-count="6">
+                <div style="width:{{ s.wAlvo }};background:{{ s.cor }}"></div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:11px">
+              <sc-for list="{{ segmentos }}" as="s" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:172px 1fr 96px 76px 66px;align-items:center;gap:12px">
+                  <div style="display:flex;align-items:center;gap:9px;min-width:0">
+                    <i style="width:9px;height:9px;border-radius:3px;flex:none;display:block;background:{{ s.cor }}"></i>
+                    <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                      <span style="font:500 11.5px/1 'Instrument Sans';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ s.nome }}</span>
+                      <span style="font:400 9px/1 'IBM Plex Mono';color:oklch(0.74 0.03 168)">{{ s.qtd }} · aplicado {{ s.aplicadoFmt }}</span>
+                    </div>
+                  </div>
+                  <div style="height:8px;border-radius:4px;background:rgba(255,255,255,.10);overflow:hidden"><div style="height:100%;border-radius:4px;width:{{ s.w }};background:{{ s.cor }}"></div></div>
+                  <span style="font:500 11.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;text-align:right">{{ s.saldoFmt }}</span>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+                    <span style="font:500 10.5px/1 'IBM Plex Mono';color:{{ s.rendCor }}">{{ s.rendFmt }}</span>
+                    <span style="font:400 9px/1 'IBM Plex Mono';color:oklch(0.76 0.03 168)">{{ s.ganhoFmt }} total</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+                    <span style="font:400 10px/1 'IBM Plex Mono';color:oklch(0.82 0.025 168)">{{ s.atualPctFmt }}</span>
+                    <span style="font:500 9.5px/1 'Instrument Sans';color:{{ s.desvioCor }}">{{ s.desvio }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;overflow:hidden">
+            <div style="padding:17px 18px 13px">
+              <h2 style="margin:0 0 4px;font:600 13.5px/1 'Instrument Sans'">Ativos na carteira</h2>
+              <p style="margin:0;font:400 10.5px/1.35 'IBM Plex Mono';color:oklch(0.78 0.025 168)">ações, fundos imobiliários, renda fixa, caixinhas Nubank, internacional e cripto</p>
+            </div>
+            <table style="width:100%;border-collapse:collapse">
+              <thead>
+                <tr style="background:rgba(255,255,255,.05)">
+                  <th style="text-align:left;padding:10px 18px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168)">Ativo</th>
+                  <th style="text-align:left;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:150px">Segmento</th>
+                  <th style="text-align:right;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:104px">Aplicado</th>
+                  <th style="text-align:right;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:110px">Saldo</th>
+                  <th style="text-align:right;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:118px">Rende no mês</th>
+                  <th style="text-align:right;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:126px">Ganho total</th>
+                  <th style="text-align:right;padding:10px 8px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:88px">Proventos</th>
+                  <th style="text-align:right;padding:10px 18px;font:600 9.5px/1 'Instrument Sans';letter-spacing:.09em;text-transform:uppercase;color:oklch(0.80 0.025 168);width:66px">Peso</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ ativos }}" as="a" hint-placeholder-count="14">
+                  <tr style="border-top:1px solid rgba(255,255,255,.07)" style-hover="background:rgba(255,255,255,.05)">
+                    <td style="padding:11px 18px">
+                      <div style="display:flex;align-items:center;gap:9px">
+                        <i style="width:9px;height:9px;border-radius:3px;flex:none;display:block;background:{{ a.cor }}"></i>
+                        <div style="display:flex;flex-direction:column;gap:3px">
+                          <span style="font:500 11.5px/1 'Instrument Sans'">{{ a.nome }}</span>
+                          <span style="font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.74 0.03 168)">{{ a.det }}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="padding:11px 8px;font:400 10.5px/1 'Instrument Sans';color:oklch(0.82 0.025 168)">{{ a.seg }}</td>
+                    <td style="padding:11px 8px;text-align:right;font:400 11px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;color:oklch(0.80 0.025 168)">{{ a.aplicadoFmt }}</td>
+                    <td style="padding:11px 8px;text-align:right;font:500 11.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums">{{ a.saldoFmt }}</td>
+                    <td style="padding:11px 8px;text-align:right">
+                      <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">
+                        <span style="font:500 11px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;color:{{ a.rendMesCor }}">{{ a.rendMesFmt }}</span>
+                        <span style="font:400 9px/1 'IBM Plex Mono';color:oklch(0.76 0.03 168)">{{ a.rendPctFmt }}</span>
+                      </div>
+                    </td>
+                    <td style="padding:11px 8px;text-align:right">
+                      <div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">
+                        <span style="font:500 11px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;color:{{ a.ganhoCor }}">{{ a.ganhoFmt }}</span>
+                        <span style="font:400 9px/1 'IBM Plex Mono';color:oklch(0.76 0.03 168)">{{ a.ganhoPctFmt }}</span>
+                      </div>
+                    </td>
+                    <td style="padding:11px 8px;text-align:right;font:400 10.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;color:oklch(0.82 0.025 168)">{{ a.provFmt }}</td>
+                    <td style="padding:11px 18px;text-align:right;font:400 10.5px/1 'IBM Plex Mono';color:oklch(0.82 0.025 168)">{{ a.pesoFmt }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,.055);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.10);border-radius:20px;padding:18px">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
+            <h2 style="margin:0;font:600 13.5px/1 'Instrument Sans'">Caixinhas e metas</h2>
+          </div>
+          <p style="margin:0 0 15px;font:400 10.5px/1.35 'IBM Plex Mono';color:oklch(0.78 0.025 168)">{{ inv.reserva }}</p>
+          <div style="display:flex;flex-direction:column;gap:15px">
+            <sc-for list="{{ caixinhas }}" as="k" hint-placeholder-count="3">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+                  <span style="font:500 11.5px/1 'Instrument Sans'">{{ k.nome }}</span>
+                  <span style="font:400 10.5px/1 'IBM Plex Mono';font-variant-numeric:tabular-nums;color:oklch(0.82 0.025 168)">{{ k.valorFmt }} / {{ k.metaFmt }}</span>
+                </div>
+                <div style="height:9px;border-radius:5px;background:rgba(255,255,255,.10);overflow:hidden"><div style="height:100%;border-radius:5px;width:{{ k.w }};background:{{ k.cor }}"></div></div>
+                <div style="display:flex;justify-content:space-between;font:400 9.5px/1 'IBM Plex Mono';color:oklch(0.76 0.03 168)">
+                  <span>{{ k.pct }} da meta</span><span>{{ k.prazo }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </main>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440}}">
+const PALETA = ['oklch(0.84 0.16 158)','oklch(0.76 0.13 200)','oklch(0.80 0.14 128)','oklch(0.82 0.15 88)','oklch(0.78 0.14 45)','oklch(0.76 0.14 320)','oklch(0.74 0.13 265)','oklch(0.80 0.13 25)'];
+
+const CATS = [
+  { nome: 'Moradia', grupo: 'Essencial', orc: 3000, real: 2959.90, meio: 'Pix + débito', cor: 'oklch(0.84 0.16 158)' },
+  { nome: 'Alimentação', grupo: 'Essencial', orc: 1400, real: 1186.42, meio: 'crédito', cor: 'oklch(0.82 0.15 88)' },
+  { nome: 'Saúde', grupo: 'Essencial', orc: 700, real: 578.00, meio: 'débito auto', cor: 'oklch(0.76 0.13 200)' },
+  { nome: 'Transporte', grupo: 'Essencial', orc: 700, real: 627.35, meio: 'crédito', cor: 'oklch(0.74 0.13 265)' },
+  { nome: 'Pets', grupo: 'Essencial', orc: 150, real: 98.00, meio: 'débito', cor: 'oklch(0.80 0.14 128)' },
+  { nome: 'Casa e manutenção', grupo: 'Essencial', orc: 500, real: 389.90, meio: 'crédito', cor: 'oklch(0.72 0.11 140)' },
+  { nome: 'Lazer', grupo: 'Qualidade de vida', orc: 400, real: 331.38, meio: 'crédito', cor: 'oklch(0.80 0.13 25)' },
+  { nome: 'Fitness', grupo: 'Qualidade de vida', orc: 300, real: 258.90, meio: 'débito auto', cor: 'oklch(0.78 0.14 45)' },
+  { nome: 'Assinaturas', grupo: 'Qualidade de vida', orc: 300, real: 265.60, meio: 'crédito', cor: 'oklch(0.76 0.14 320)' },
+  { nome: 'Vestuário', grupo: 'Qualidade de vida', orc: 300, real: 258.00, meio: 'crédito', cor: 'oklch(0.78 0.12 350)' },
+  { nome: 'Educação', grupo: 'Desenvolvimento', orc: 600, real: 436.00, meio: 'boleto', cor: 'oklch(0.74 0.12 230)' }
+];
+
+const GRUPOS = ['Essencial', 'Qualidade de vida', 'Desenvolvimento'];
+
+const TX = [
+  { data: '01/08', desc: 'Salário · Vega Tech', cat: 'Renda', metodo: 'Pix', conta: 'Nubank · Conta', parc: '—', tipo: 'receita', status: 'recebido', valor: 9800 },
+  { data: '01/08', desc: 'Freela landing page', cat: 'Renda', metodo: 'Pix', conta: 'Nubank · Conta', parc: '—', tipo: 'receita', status: 'recebido', valor: 2600 },
+  { data: '01/08', desc: 'Aporte mensal · corretora', cat: 'Aporte', metodo: 'Transf.', conta: 'Corretora XP', parc: '—', tipo: 'aporte', status: 'aplicado', valor: 2600 },
+  { data: '01/08', desc: 'Aluguel apartamento', cat: 'Moradia', metodo: 'Pix', conta: 'Nubank · Conta', parc: '—', tipo: 'despesa', status: 'pago', valor: 2200 },
+  { data: '01/08', desc: 'Ração e banho · Tofu', cat: 'Pets', metodo: 'Débito', conta: 'Nubank · Conta', parc: '—', tipo: 'despesa', status: 'pago', valor: 98 },
+  { data: '31/07', desc: 'Mercado São Jorge', cat: 'Alimentação', metodo: 'Crédito', conta: 'Nubank Ultravioleta', parc: '1/1', tipo: 'despesa', status: 'na fatura', valor: 412.80 },
+  { data: '31/07', desc: 'Notebook Dell', cat: 'Casa e manutenção', metodo: 'Crédito', conta: 'Nubank Ultravioleta', parc: '5/10', tipo: 'despesa', status: 'parcelado', valor: 389.90 },
+  { data: '30/07', desc: 'Condomínio', cat: 'Moradia', metodo: 'Débito auto', conta: 'Itaú · Conta', parc: '—', tipo: 'despesa', status: 'pago', valor: 640 },
+  { data: '30/07', desc: 'Consulta dermatologia', cat: 'Saúde', metodo: 'Pix', conta: 'Nubank · Conta', parc: '—', tipo: 'despesa', status: 'pago', valor: 280 },
+  { data: '29/07', desc: 'Uber · trajetos semana', cat: 'Transporte', metodo: 'Crédito', conta: 'Inter Gold', parc: '1/1', tipo: 'despesa', status: 'na fatura', valor: 96.45 },
+  { data: '29/07', desc: 'Seguro do carro', cat: 'Transporte', metodo: 'Boleto', conta: 'Itaú · Conta', parc: '—', tipo: 'despesa', status: 'pago', valor: 214.60 },
+  { data: '28/07', desc: 'Restaurante Nagai', cat: 'Alimentação', metodo: 'Crédito', conta: 'Nubank Ultravioleta', parc: '1/1', tipo: 'despesa', status: 'na fatura', valor: 187.60 },
+  { data: '28/07', desc: 'Academia Iron', cat: 'Fitness', metodo: 'Débito auto', conta: 'Itaú · Conta', parc: '—', tipo: 'despesa', status: 'pago', valor: 129 },
+  { data: '27/07', desc: 'Curso de inglês', cat: 'Educação', metodo: 'Boleto', conta: 'Itaú · Conta', parc: '4/12', tipo: 'despesa', status: 'em aberto', valor: 340 },
+  { data: '27/07', desc: 'Internet fibra 600', cat: 'Moradia', metodo: 'Débito auto', conta: 'Itaú · Conta', parc: '—', tipo: 'despesa', status: 'pago', valor: 119.90 }
+];
+
+const FLUXO = [
+  { mes: 'mar', ent: 11450, sai: 7420, inv: 2000 },
+  { mes: 'abr', ent: 11900, sai: 6320, inv: 2400 },
+  { mes: 'mai', ent: 11500, sai: 7180, inv: 2200 },
+  { mes: 'jun', ent: 11900, sai: 6890, inv: 2400 },
+  { mes: 'jul', ent: 12400, sai: 6038, inv: 2600 },
+  { mes: 'ago', ent: 12400, sai: 7389, inv: 2600 }
+];
+
+const CONTAS = [
+  { nome: 'Nubank · Conta', tipo: 'Conta corrente', tag: 'Pix + débito', valor: 4210.55, cor: 'oklch(0.78 0.16 300)', ini: 'NU' },
+  { nome: 'Itaú · Conta', tipo: 'Conta corrente', tag: 'débitos automáticos', valor: 1890.20, cor: 'oklch(0.82 0.15 45)', ini: 'IT' },
+  { nome: 'Carteira', tipo: 'Dinheiro', tag: 'espécie', valor: 180.00, cor: 'oklch(0.84 0.10 168)', ini: 'R$' }
+];
+
+const BILLS = [
+  { dia: 1, nome: 'Aluguel', valor: 2200, fixo: true, auto: false, pago: true, cat: 'Moradia' },
+  { dia: 2, nome: 'Plano odontológico', valor: 89, fixo: true, auto: true, pago: false, cat: 'Saúde' },
+  { dia: 5, nome: 'Internet fibra 600', valor: 119.90, fixo: true, auto: true, pago: false, cat: 'Moradia' },
+  { dia: 5, nome: 'Condomínio', valor: 640, fixo: true, auto: true, pago: true, cat: 'Moradia' },
+  { dia: 7, nome: 'Energia elétrica', valor: 187.40, fixo: false, auto: false, pago: false, cat: 'Moradia' },
+  { dia: 8, nome: 'Academia Iron', valor: 129.90, fixo: true, auto: true, pago: false, cat: 'Fitness' },
+  { dia: 10, nome: 'Plano de saúde', valor: 489, fixo: true, auto: true, pago: false, cat: 'Saúde' },
+  { dia: 15, nome: 'Água e esgoto', valor: 78.20, fixo: false, auto: false, pago: false, cat: 'Moradia' },
+  { dia: 18, nome: 'Curso de inglês', valor: 340, fixo: true, auto: false, pago: false, cat: 'Educação' },
+  { dia: 20, nome: 'Gás encanado', valor: 62.40, fixo: false, auto: true, pago: false, cat: 'Moradia' },
+  { dia: 22, nome: 'Celular + dados', valor: 69.90, fixo: true, auto: true, pago: false, cat: 'Assinaturas' },
+  { dia: 30, nome: 'Seguro do carro', valor: 214.60, fixo: true, auto: false, pago: false, cat: 'Transporte' }
+];
+
+const CARDS = [
+  { nome: 'Nubank Ultravioleta', bandeira: 'Mastercard · final 4471', lim: 8000, fechado: 2842.87, fecha: 28, vence: 5, melhor: 29, paga: false, cor: 'oklch(0.78 0.16 300)',
+    parcelas: [{ desc: 'Notebook Dell', p: 5, pt: 10, v: 389.90 }, { desc: 'Tênis de corrida', p: 3, pt: 6, v: 129.90 }] },
+  { nome: 'Itaú Click', bandeira: 'Visa · final 8820', lim: 5000, fechado: 1120.40, fecha: 2, vence: 10, melhor: 3, paga: true, cor: 'oklch(0.82 0.15 45)',
+    parcelas: [{ desc: 'Plano odontológico', p: 4, pt: 12, v: 89 }] },
+  { nome: 'Inter Gold', bandeira: 'Mastercard · final 1902', lim: 3000, fechado: 412.00, fecha: 20, vence: 27, melhor: 21, paga: false, cor: 'oklch(0.84 0.14 88)', parcelas: [] }
+];
+
+const RECS = [
+  { nome: 'iCloud 2 TB', valor: 49.90, cat: 'Assinaturas', cartao: 'Itaú Click', dia: 3, tipo: 'assinatura' },
+  { nome: 'Spotify Família', valor: 34.90, cat: 'Assinaturas', cartao: 'Nubank Ultravioleta', dia: 9, tipo: 'assinatura' },
+  { nome: 'Netflix Premium', valor: 59.90, cat: 'Assinaturas', cartao: 'Nubank Ultravioleta', dia: 14, tipo: 'assinatura' },
+  { nome: 'Seguro do celular', valor: 24.90, cat: 'Assinaturas', cartao: 'Inter Gold', dia: 17, tipo: 'assinatura' },
+  { nome: 'Notion + Figma', valor: 96.00, cat: 'Educação', cartao: 'Nubank Ultravioleta', dia: 21, tipo: 'assinatura' },
+  { nome: 'Plano odontológico', valor: 89.00, cat: 'Saúde', cartao: 'Itaú Click', dia: 2, tipo: 'parcela', pa: 4, pt: 12 },
+  { nome: 'Curso de inglês', valor: 340.00, cat: 'Educação', cartao: 'Boleto · Itaú', dia: 18, tipo: 'parcela', pa: 4, pt: 12 },
+  { nome: 'Tênis de corrida', valor: 129.90, cat: 'Fitness', cartao: 'Nubank Ultravioleta', dia: 26, tipo: 'parcela', pa: 3, pt: 6 },
+  { nome: 'Notebook Dell', valor: 389.90, cat: 'Casa e manutenção', cartao: 'Nubank Ultravioleta', dia: 27, tipo: 'parcela', pa: 5, pt: 10 }
+];
+
+// Carteira: rendimento é reinvestido — nunca entra no fluxo de caixa do mês
+const SEGCOR = {
+  'Ações': 'oklch(0.84 0.16 158)', 'Fundos imobiliários': 'oklch(0.76 0.13 200)',
+  'Renda fixa': 'oklch(0.82 0.15 88)', 'Reserva · caixinhas': 'oklch(0.80 0.14 128)',
+  'Internacional': 'oklch(0.76 0.14 320)', 'Cripto': 'oklch(0.80 0.13 25)'
+};
+
+const ATIVOS = [
+  { nome: 'PETR4 · Petrobras PN', seg: 'Ações', aplicado: 6800, saldo: 7420, mes: 148, prov: 96, det: '340 cotas · DY 11,2%' },
+  { nome: 'ITSA4 · Itaúsa', seg: 'Ações', aplicado: 5200, saldo: 5610, mes: 96, prov: 42, det: '520 cotas · DY 6,4%' },
+  { nome: 'BBSE3 · BB Seguridade', seg: 'Ações', aplicado: 3400, saldo: 3680, mes: 62, prov: 38, det: '96 cotas · DY 8,1%' },
+  { nome: 'WEGE3 · WEG', seg: 'Ações', aplicado: 2900, saldo: 3170, mes: 44, prov: 8, det: '58 cotas · DY 1,1%' },
+  { nome: 'MXRF11 · Maxi Renda', seg: 'Fundos imobiliários', aplicado: 3600, saldo: 3790, mes: 34, prov: 34, det: '372 cotas · rende mensal' },
+  { nome: 'HGLG11 · CSHG Logística', seg: 'Fundos imobiliários', aplicado: 3200, saldo: 3410, mes: 29, prov: 29, det: '21 cotas · galpões' },
+  { nome: 'KNCR11 · Kinea Rendimentos', seg: 'Fundos imobiliários', aplicado: 1800, saldo: 1920, mes: 16, prov: 16, det: '18 cotas · CRI CDI' },
+  { nome: 'Tesouro IPCA+ 2035', seg: 'Renda fixa', aplicado: 8200, saldo: 9140, mes: 78, prov: 0, det: 'IPCA + 6,12% a.a.' },
+  { nome: 'CDB Inter · 112% CDI', seg: 'Renda fixa', aplicado: 5400, saldo: 6180, mes: 52, prov: 0, det: 'vence 03/2028 · D+0' },
+  { nome: 'Caixinha Nubank · 100% CDI', seg: 'Reserva · caixinhas', aplicado: 9800, saldo: 10240, mes: 84, prov: 0, det: 'liquidez imediata' },
+  { nome: 'Caixinha Turbo · 110% CDI', seg: 'Reserva · caixinhas', aplicado: 7600, saldo: 8160, mes: 71, prov: 0, det: 'resgate em D+1' },
+  { nome: 'IVVB11 · S&P 500', seg: 'Internacional', aplicado: 3000, saldo: 3460, mes: 58, prov: 0, det: '18 cotas · dólar embutido' },
+  { nome: 'Bitcoin', seg: 'Cripto', aplicado: 1400, saldo: 1780, mes: -42, prov: 0, det: '0,0092 BTC' },
+  { nome: 'Ethereum', seg: 'Cripto', aplicado: 620, saldo: 460, mes: -18, prov: 0, det: '0,21 ETH' }
+];
+
+const ALVOS = { 'Ações': 30, 'Fundos imobiliários': 15, 'Renda fixa': 20, 'Reserva · caixinhas': 25, 'Internacional': 5, 'Cripto': 5 };
+
+const CAIXINHAS = [
+  { nome: 'Reserva de emergência', valor: 18400, meta: 24000, prazo: '6 meses de custo', cor: 'oklch(0.80 0.14 128)' },
+  { nome: 'Viagem · Patagônia', valor: 3200, meta: 8000, prazo: 'meta out/2027', cor: 'oklch(0.76 0.13 200)' },
+  { nome: 'Trocar o carro', valor: 6400, meta: 30000, prazo: 'meta dez/2028', cor: 'oklch(0.82 0.15 88)' }
+];
+
+const HOJE = 1;
+
+class Component extends DCLogic {
+  state = {
+    tab: 'visao', modal: false, priv: false, busca: '',
+    fTipo: 'todos', fMetodo: 'todos', fBill: 'todas', fRec: 'todos',
+    bills: BILLS.map(b => ({ ...b })),
+    cards: CARDS.map(c => ({ ...c })),
+    recs: RECS.map(r => ({ ...r, ativo: true })),
+    extras: [],
+    grupoAberto: 'Essencial',
+    novaCat: { nome: '', orc: '', grupo: 'Essencial', cor: PALETA[0] },
+    novoRec: { nome: '', valor: '', dia: '15', cat: 'Assinaturas', cartao: 'Nubank Ultravioleta', tipo: 'assinatura', pt: '12' },
+    novo: { tipo: 'despesa', valor: '', desc: '', cat: 'Alimentação', metodo: 'Pix', conta: 'Nubank · Conta', data: '01/08/2026', parcelas: '1', rec: false },
+    cats: CATS.map(c => ({ ...c }))
+  };
+
+  n(v) { return v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  brl(v) { return this.state.priv ? 'R$ ••••' : 'R$ ' + this.n(v); }
+  brl0(v) { return this.state.priv ? 'R$ ••••' : 'R$ ' + v.toLocaleString('pt-BR', { maximumFractionDigits: 0 }); }
+  pct(v) { return v.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%'; }
+
+  renderVals() {
+    const s = this.state;
+    const COR = n => { const f = s.cats.find(c => c.nome === n); return f ? f.cor : n === 'Renda' ? 'oklch(0.86 0.16 158)' : n === 'Aporte' ? 'oklch(0.74 0.13 210)' : 'oklch(0.70 0.02 168)'; };
+    const cats = s.cats;
+    const despesas = cats.reduce((a, c) => a + c.real, 0);
+    const receitas = 12400;
+    const aporte = 2600;
+    const livre = receitas - despesas - aporte;
+
+    const navMk = (id, label, badge, badgeCor) => {
+      const on = s.tab === id;
+      return { label, badge, badgeCor: badgeCor || 'oklch(0.76 0.03 168)', onClick: () => this.setState({ tab: id }),
+        bg: on ? 'rgba(255,255,255,.13)' : 'transparent', borda: on ? 'rgba(255,255,255,.16)' : 'transparent',
+        fg: on ? 'oklch(0.98 0.01 168)' : 'oklch(0.86 0.02 168)' };
+    };
+
+    const grupos = GRUPOS.map(g => {
+      const list = cats.filter(c => c.grupo === g);
+      const tot = list.reduce((a, c) => a + c.real, 0);
+      return {
+        nome: g, realFmt: this.brl(tot), pctRenda: this.pct((tot / receitas) * 100),
+        cats: list.sort((a, b) => b.real - a.real).map(c => ({
+          nome: c.nome, cor: c.cor, realFmt: this.brl0(c.real),
+          wGrupo: tot ? ((c.real / tot) * 100).toFixed(2) + '%' : '0%',
+          pctOrc: this.pct(tot ? (c.real / tot) * 100 : 0),
+          pctCor: 'oklch(0.78 0.025 168)'
+        }))
+      };
+    });
+
+    const maxF = Math.max(...FLUXO.map(m => Math.max(m.ent, m.sai)));
+    const fluxo = FLUXO.map(m => ({
+      mes: m.mes,
+      hIn: ((m.ent / maxF) * 100).toFixed(1) + '%',
+      hOut: ((m.sai / maxF) * 100).toFixed(1) + '%',
+      hInv: ((m.inv / maxF) * 100).toFixed(1) + '%',
+      saldoFmt: '+' + ((m.ent - m.sai - m.inv) / 1000).toFixed(1).replace('.', ',') + 'k'
+    }));
+
+    const txRow = t => ({
+      ...t, catCor: COR(t.cat),
+      valorFmt: (t.tipo === 'receita' ? '+ ' : t.tipo === 'aporte' ? '↗ ' : '− ') + this.brl(t.valor),
+      cor: t.tipo === 'receita' ? 'oklch(0.88 0.15 158)' : t.tipo === 'aporte' ? 'oklch(0.80 0.12 210)' : 'oklch(0.96 0.012 168)'
+    });
+
+    const comprometido = [
+      { nome: 'Essencial', v: cats.filter(c => c.grupo === 'Essencial').reduce((a, c) => a + c.real, 0), cor: 'oklch(0.84 0.16 158)' },
+      { nome: 'Qualidade de vida', v: cats.filter(c => c.grupo === 'Qualidade de vida').reduce((a, c) => a + c.real, 0), cor: 'oklch(0.80 0.14 88)' },
+      { nome: 'Desenvolvimento', v: cats.filter(c => c.grupo === 'Desenvolvimento').reduce((a, c) => a + c.real, 0), cor: 'oklch(0.74 0.12 230)' },
+      { nome: 'Aporte em investimentos', v: aporte, cor: 'oklch(0.72 0.13 210)' },
+      { nome: 'Sobra livre', v: Math.max(0, livre), cor: 'rgba(255,255,255,.20)' }
+    ];
+
+    const chip = (list, cur, set) => list.map(o => ({
+      label: o[1], onClick: () => set(o[0]),
+      bg: cur === o[0] ? 'rgba(255,255,255,.16)' : 'transparent',
+      fg: cur === o[0] ? 'oklch(0.98 0.01 168)' : 'oklch(0.82 0.025 168)'
+    }));
+    const opt = (on) => ({
+      bg: on ? 'rgba(255,255,255,.14)' : 'rgba(255,255,255,.04)',
+      borda: on ? 'oklch(0.84 0.15 158)' : 'rgba(255,255,255,.11)',
+      fg: on ? 'oklch(0.98 0.01 168)' : 'oklch(0.86 0.02 168)'
+    });
+
+    // ── lançamentos ──
+    const allTx = [...s.extras, ...TX];
+    const q = s.busca.trim().toLowerCase();
+    const filtered = allTx.filter(t =>
+      (s.fTipo === 'todos' || t.tipo === s.fTipo) &&
+      (s.fMetodo === 'todos' || t.metodo.toLowerCase().indexOf(s.fMetodo) === 0) &&
+      (!q || (t.desc + ' ' + t.cat + ' ' + t.conta).toLowerCase().includes(q)));
+    const fEnt = filtered.filter(t => t.tipo === 'receita').reduce((a, t) => a + t.valor, 0);
+    const fSai = filtered.filter(t => t.tipo !== 'receita').reduce((a, t) => a + t.valor, 0);
+    const stCor = t => t.status === 'pago' || t.status === 'recebido' || t.status === 'aplicado'
+      ? ['rgba(134,239,172,.16)', 'oklch(0.88 0.14 158)']
+      : t.status === 'em aberto' ? ['rgba(253,186,116,.16)', 'oklch(0.84 0.14 55)'] : ['rgba(255,255,255,.09)', 'oklch(0.86 0.02 168)'];
+
+    // ── contas a pagar ──
+    const bills = s.bills;
+    const billTotal = bills.reduce((a, b) => a + b.valor, 0);
+    const pagas = bills.filter(b => b.pago).reduce((a, b) => a + b.valor, 0);
+    const fixas = bills.filter(b => b.fixo).reduce((a, b) => a + b.valor, 0);
+    const autoAbertas = bills.filter(b => b.auto && !b.pago).length;
+    const manualAbertas = bills.filter(b => !b.auto && !b.pago).length;
+    const visBills = bills.map((b, i) => ({ b, i })).filter(({ b }) => s.fBill === 'todas' || (s.fBill === 'fixas' ? b.fixo : !b.fixo));
+    const toggleBill = i => this.setState(st => ({ bills: st.bills.map((b, j) => j === i ? { ...b, pago: !b.pago } : b) }));
+
+    const dias = [];
+    for (let i = 0; i < 42; i++) {
+      const num = i - 5 + 1;
+      const valid = num >= 1 && num <= 31;
+      dias.push({
+        num: valid ? String(num) : '',
+        bills: valid ? visBills.filter(({ b }) => b.dia === num).map(({ b, i: bi }) => ({
+          nome: b.nome, mini: this.brl0(b.valor).replace('R$ ', '') + (b.auto ? ' · auto' : ''),
+          onPay: () => toggleBill(bi),
+          pillBg: b.pago ? 'rgba(134,239,172,.20)' : b.fixo ? 'rgba(125,211,252,.16)' : 'rgba(253,186,116,.18)',
+          pillFg: b.pago ? 'oklch(0.90 0.13 158)' : 'oklch(0.96 0.012 168)',
+          pillFg2: b.pago ? 'oklch(0.84 0.11 158)' : 'oklch(0.84 0.02 168)',
+          risco: b.pago ? 'line-through' : 'none'
+        })) : [],
+        bg: !valid ? 'transparent' : num === HOJE ? 'rgba(134,239,172,.12)' : 'rgba(255,255,255,.035)',
+        borda: num === HOJE ? 'oklch(0.84 0.15 158)' : 'rgba(255,255,255,.07)',
+        numCor: num === HOJE ? 'oklch(0.90 0.15 158)' : 'oklch(0.76 0.03 168)'
+      });
+    }
+    const billsList = visBills.map(({ b, i }) => ({
+      nome: b.nome, valorFmt: this.brl(b.valor), onPay: () => toggleBill(i),
+      check: b.pago ? '✓' : '',
+      boxBg: b.pago ? 'oklch(0.84 0.16 158)' : 'transparent',
+      boxBorda: b.pago ? 'oklch(0.84 0.16 158)' : 'rgba(255,255,255,.24)',
+      nomeCor: b.pago ? 'oklch(0.74 0.03 168)' : 'oklch(0.96 0.012 168)',
+      risco: b.pago ? 'line-through' : 'none',
+      sub: 'dia ' + String(b.dia).padStart(2, '0') + ' · ' + (b.fixo ? 'fixa' : 'variável') + ' · ' + b.cat,
+      statusLabel: b.pago ? 'paga' : 'em aberto',
+      stBg: b.pago ? 'rgba(134,239,172,.16)' : 'rgba(253,186,116,.16)',
+      stFg: b.pago ? 'oklch(0.88 0.14 158)' : 'oklch(0.84 0.14 55)',
+      tag: b.auto ? 'débito automático' : 'pagar manual',
+      tagCor: b.auto ? 'oklch(0.80 0.11 200)' : 'oklch(0.78 0.025 168)'
+    }));
+    const due = bills.map((b, i) => ({ b, i })).filter(({ b }) => b.dia >= HOJE && b.dia <= HOJE + 7 && !b.pago);
+
+    // ── assinaturas / parceladas ──
+    const recsAtivos = s.recs.filter(r => r.ativo);
+    const recLanc = recsAtivos.filter(r => r.dia <= HOJE);
+    const recPrev = recsAtivos.filter(r => r.dia > HOJE);
+    const somaAssin = recsAtivos.filter(r => r.tipo === 'assinatura').reduce((a, r) => a + r.valor, 0);
+    const somaParc = recsAtivos.filter(r => r.tipo === 'parcela').reduce((a, r) => a + r.valor, 0);
+    const restParc = recsAtivos.filter(r => r.tipo === 'parcela').reduce((a, r) => a + r.valor * (r.pt - r.pa + 1), 0);
+    const prox = [...recPrev].sort((a, b) => a.dia - b.dia)[0];
+    const recRows = s.recs.filter(r => s.fRec === 'todos' || (s.fRec === 'assinaturas' ? r.tipo === 'assinatura' : r.tipo === 'parcela')).map(r => {
+      const idx = s.recs.indexOf(r), lanc = r.dia <= HOJE;
+      return {
+        nome: r.nome, cat: r.cat, catCor: COR(r.cat), cartao: r.cartao, valorFmt: this.brl(r.valor),
+        dia: 'dia ' + String(r.dia).padStart(2, '0'),
+        tipoLabel: r.tipo === 'assinatura' ? 'assinatura' : 'parcelado',
+        tipoBg: r.tipo === 'assinatura' ? 'rgba(216,180,254,.16)' : 'rgba(125,211,252,.16)',
+        tipoFg: r.tipo === 'assinatura' ? 'oklch(0.86 0.11 320)' : 'oklch(0.84 0.12 210)',
+        status: !r.ativo ? 'pausada' : lanc ? 'na fatura' : 'prevista',
+        stBg: !r.ativo ? 'rgba(255,255,255,.08)' : lanc ? 'rgba(134,239,172,.16)' : 'rgba(253,186,116,.16)',
+        stFg: !r.ativo ? 'oklch(0.74 0.02 168)' : lanc ? 'oklch(0.88 0.14 158)' : 'oklch(0.84 0.14 55)',
+        parcLabel: r.tipo === 'parcela' ? r.pa + ' de ' + r.pt : 'mensal',
+        parcW: r.tipo === 'parcela' ? ((r.pa / r.pt) * 100).toFixed(0) + '%' : '100%',
+        parcCor: r.tipo === 'parcela' ? 'oklch(0.76 0.13 210)' : 'rgba(255,255,255,.22)',
+        restaFmt: r.tipo === 'parcela' ? 'faltam ' + this.brl0(r.valor * (r.pt - r.pa + 1)) : 'sem fim previsto',
+        opacidade: r.ativo ? '1' : '0.45', acao: r.ativo ? 'pausar' : 'retomar',
+        onToggle: () => this.setState(st => ({ recs: st.recs.map((x, j) => j === idx ? { ...x, ativo: !x.ativo } : x) }))
+      };
+    });
+    const timeline = [];
+    for (let d = 1; d <= 31; d++) {
+      const nos = recsAtivos.filter(r => r.dia === d);
+      timeline.push({
+        num: d % 2 === 1 ? String(d) : '',
+        marks: nos.map(r => ({ cor: r.tipo === 'assinatura' ? COR(r.cat) : 'oklch(0.76 0.13 210)', op: r.dia <= HOJE ? '1' : '0.40' })),
+        bg: d === HOJE ? 'rgba(134,239,172,.14)' : nos.length ? 'rgba(255,255,255,.05)' : 'transparent',
+        borda: d === HOJE ? 'oklch(0.84 0.15 158)' : 'transparent',
+        numCor: d === HOJE ? 'oklch(0.90 0.15 158)' : 'oklch(0.74 0.03 168)'
+      });
+    }
+
+    // ── cartões ──
+    const cards = s.cards.map((c, i) => {
+      const prev = recPrev.filter(r => r.cartao === c.nome).reduce((a, r) => a + r.valor, 0);
+      const est = c.fechado + prev;
+      const parcTotal = c.parcelas.reduce((a, p) => a + p.v, 0);
+      const futuras = c.parcelas.reduce((a, p) => a + p.v * (p.pt - p.p), 0);
+      return {
+        nome: c.nome, bandeira: c.bandeira, cor: c.cor,
+        faturaFmt: this.brl(c.fechado), estFmt: this.brl(est), previstoFmt: this.brl(prev),
+        limiteFmt: this.brl0(c.lim), dispFmt: this.brl(c.lim - est),
+        usoPct: Math.round((est / c.lim) * 100) + '%',
+        usoBarra: Math.min(100, (est / c.lim) * 100).toFixed(1) + '%',
+        wLanc: ((c.fechado / est) * 100).toFixed(1) + '%',
+        wPrev: ((prev / est) * 100).toFixed(1) + '%',
+        usoCor: est / c.lim > 0.7 ? 'oklch(0.76 0.16 25)' : 'oklch(0.84 0.16 158)',
+        fecha: 'dia ' + String(c.fecha).padStart(2, '0'),
+        vence: 'dia ' + String(c.vence).padStart(2, '0'),
+        melhor: 'dia ' + String(c.melhor).padStart(2, '0'),
+        diasFecha: (d => d === 0 ? 'fecha hoje' : d === 1 ? 'fecha amanhã' : d + ' dias para fechar')((c.fecha - HOJE + 31) % 31),
+        pagaLabel: c.paga ? 'fatura paga' : 'fatura em aberto',
+        pagaBg: c.paga ? 'rgba(134,239,172,.20)' : 'rgba(253,186,116,.18)',
+        pagaFg: c.paga ? 'oklch(0.90 0.14 158)' : 'oklch(0.86 0.14 55)',
+        btnLabel: c.paga ? 'Desmarcar pagamento' : 'Marcar fatura como paga',
+        btnBg: c.paga ? 'rgba(255,255,255,.06)' : 'linear-gradient(135deg,oklch(0.86 0.17 155),oklch(0.74 0.15 172))',
+        btnFg: c.paga ? 'oklch(0.90 0.02 168)' : 'oklch(0.22 0.05 168)',
+        onPagar: () => this.setState(st => ({ cards: st.cards.map((x, j) => j === i ? { ...x, paga: !x.paga } : x) })),
+        parcelas: c.parcelas.map(p => ({ desc: p.desc, p: p.p + '/' + p.pt, valorFmt: this.brl(p.v), w: ((p.p / p.pt) * 100).toFixed(0) + '%' })),
+        parcNota: c.parcelas.length ? this.brl(parcTotal) + '/mês em parcelas · ' + this.brl0(futuras) + ' a vencer' : 'sem parcelamentos ativos',
+        recItens: recPrev.filter(r => r.cartao === c.nome).map(r => ({ nome: r.nome, dia: 'dia ' + r.dia, valorFmt: this.brl(r.valor), cor: COR(r.cat) }))
+      };
+    });
+    const cardsAbertas = s.cards.filter(c => !c.paga);
+
+    // ── investimentos (fora do fluxo de caixa) ──
+    const invTotal = ATIVOS.reduce((a, x) => a + x.saldo, 0);
+    const invAplicado = ATIVOS.reduce((a, x) => a + x.aplicado, 0);
+    const rendMes = ATIVOS.reduce((a, x) => a + x.mes, 0);
+    const provMes = ATIVOS.reduce((a, x) => a + x.prov, 0);
+    const segNomes = Object.keys(SEGCOR);
+    const segmentos = segNomes.map(nome => {
+      const list = ATIVOS.filter(x => x.seg === nome);
+      const saldo = list.reduce((a, x) => a + x.saldo, 0);
+      const apl = list.reduce((a, x) => a + x.aplicado, 0);
+      const rm = list.reduce((a, x) => a + x.mes, 0);
+      const atualPct = (saldo / invTotal) * 100;
+      const d = atualPct - ALVOS[nome];
+      return {
+        nome, cor: SEGCOR[nome], qtd: list.length + (list.length > 1 ? ' ativos' : ' ativo'),
+        saldoFmt: this.brl(saldo), aplicadoFmt: this.brl0(apl),
+        rendFmt: (rm >= 0 ? '+ ' : '− ') + this.brl(Math.abs(rm)),
+        rendCor: rm >= 0 ? 'oklch(0.88 0.15 158)' : 'oklch(0.78 0.16 25)',
+        ganhoFmt: (saldo - apl >= 0 ? '+' : '−') + this.pct(Math.abs((saldo / apl - 1) * 100)),
+        atualPctFmt: this.pct(atualPct), alvoFmt: ALVOS[nome] + '%',
+        w: atualPct.toFixed(2) + '%', wAlvo: ALVOS[nome] + '%',
+        desvio: (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1) + ' pp',
+        desvioCor: Math.abs(d) < 2 ? 'oklch(0.78 0.025 168)' : d > 0 ? 'oklch(0.82 0.14 45)' : 'oklch(0.80 0.12 210)',
+        onSel: () => this.setState({ fSeg: s.fSeg === nome ? null : nome })
+      };
+    });
+    const ativos = ATIVOS.map(x => ({
+      nome: x.nome, det: x.det, seg: x.seg, cor: SEGCOR[x.seg],
+      aplicadoFmt: this.brl(x.aplicado), saldoFmt: this.brl(x.saldo),
+      rendMesFmt: (x.mes >= 0 ? '+ ' : '− ') + this.brl(Math.abs(x.mes)),
+      rendMesCor: x.mes >= 0 ? 'oklch(0.88 0.15 158)' : 'oklch(0.78 0.16 25)',
+      rendPctFmt: (x.mes >= 0 ? '+' : '−') + this.pct(Math.abs((x.mes / x.saldo) * 100)),
+      ganhoFmt: (x.saldo - x.aplicado >= 0 ? '+ ' : '− ') + this.brl(Math.abs(x.saldo - x.aplicado)),
+      ganhoCor: x.saldo >= x.aplicado ? 'oklch(0.88 0.15 158)' : 'oklch(0.78 0.16 25)',
+      ganhoPctFmt: (x.saldo >= x.aplicado ? '+' : '−') + this.pct(Math.abs((x.saldo / x.aplicado - 1) * 100)),
+      provFmt: x.prov > 0 ? this.brl(x.prov) : '—',
+      pesoFmt: this.pct((x.saldo / invTotal) * 100),
+      w: ((x.saldo / invTotal) * 100 * 4).toFixed(1) + '%'
+    }));
+
+    // ── formulários ──
+    const nc = s.novaCat, nr = s.novoRec, nv = s.novo;
+    const ncOrc = Number(String(nc.orc).replace(/\./g, '').replace(',', '.')) || 0;
+    const nrVal = Number(String(nr.valor).replace(/\./g, '').replace(',', '.')) || 0;
+    const nvVal = Number(String(nv.valor).replace(/\./g, '').replace(',', '.')) || 0;
+    const nvParc = Math.max(1, Number(nv.parcelas) || 1);
+
+    const maiorCat = Math.max(...cats.map(c => c.real));
+    let acc = 0;
+    const ordenadas = [...cats].sort((a, b) => b.real - a.real);
+    const donut = 'conic-gradient(' + ordenadas.map(c => {
+      const a = acc, b = acc + (c.real / despesas) * 100; acc = b;
+      return c.cor + ' ' + a.toFixed(2) + '% ' + b.toFixed(2) + '%';
+    }).join(',') + ')';
+
+    return {
+      viewTitle: { visao: 'Visão geral · agosto 2026', lanc: 'Lançamentos', contas: 'Contas a pagar', cartoes: 'Cartões de crédito', cat: 'Categorias', rec: 'Assinaturas e parcelas', invest: 'Investimentos' }[s.tab],
+      viewSub: {
+        visao: 'entradas, saídas e compromissos do mês — rendimento de investimento não entra aqui',
+        lanc: 'todo income e despesa com categoria, meio de pagamento e parcelas',
+        contas: 'vencimentos fixos e variáveis · pagas e em aberto',
+        cartoes: 'fechamento, vencimento, melhor dia de compra, fatura paga e limite',
+        cat: 'para onde o dinheiro foi — agregado por grupo e detalhado por categoria',
+        rec: 'cobranças que entram na fatura só no dia do faturamento',
+        invest: 'carteira, rendimento e alocação — rendimento é reinvestido, fora do fluxo de caixa'
+      }[s.tab],
+      isVisao: s.tab === 'visao', isLanc: s.tab === 'lanc', isContas: s.tab === 'contas',
+      isCartoes: s.tab === 'cartoes', isCat: s.tab === 'cat', isRec: s.tab === 'rec', isInvest: s.tab === 'invest',
+
+      lancamentos: filtered.map(t => { const c = stCor(t); return { ...txRow(t), stBg: c[0], stFg: c[1] }; }),
+      lancResumo: filtered.length + ' lançamentos · entradas ' + this.brl(fEnt) + ' · saídas ' + this.brl(fSai),
+      lancFooter: filtered.length + ' de ' + allTx.length + ' exibidos',
+      lancSaldo: this.brl(fEnt - fSai),
+      filtroTipo: chip([['todos', 'Todos'], ['receita', 'Receitas'], ['despesa', 'Despesas'], ['aporte', 'Aportes']], s.fTipo, v => this.setState({ fTipo: v })),
+      filtroMetodo: chip([['todos', 'Todo meio'], ['pix', 'Pix'], ['débito', 'Débito'], ['crédito', 'Crédito'], ['boleto', 'Boleto']], s.fMetodo, v => this.setState({ fMetodo: v })),
+
+      billStats: {
+        total: this.brl(billTotal), qtd: bills.length + ' contas · ' + this.pct((billTotal / receitas) * 100) + ' da renda',
+        pagas: this.brl(pagas), pagasQtd: bills.filter(b => b.pago).length + ' de ' + bills.length + ' quitadas',
+        pagasPct: ((pagas / billTotal) * 100).toFixed(1) + '%',
+        aberto: this.brl(billTotal - pagas),
+        abertoNota: autoAbertas + ' em débito automático · ' + manualAbertas + ' exigem ação',
+        fixVar: Math.round((fixas / billTotal) * 100) + ' / ' + (100 - Math.round((fixas / billTotal) * 100)),
+        fixPct: ((fixas / billTotal) * 100).toFixed(1) + '%',
+        fixFmt: this.brl(fixas), varFmt: this.brl(billTotal - fixas)
+      },
+      diasMes: dias, billsList, semana: ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'],
+      filtroBill: chip([['todas', 'Todas'], ['fixas', 'Fixas'], ['variaveis', 'Variáveis']], s.fBill, v => this.setState({ fBill: v })),
+
+      cards, cardsResumo: cardsAbertas.length + ' fatura(s) em aberto · ' + this.brl(cardsAbertas.reduce((a, c) => a + c.fechado, 0)) + ' a pagar',
+      recStats: {
+        assinaturas: this.brl(somaAssin), assinaturasQtd: recsAtivos.filter(r => r.tipo === 'assinatura').length + ' ativas · ' + this.brl0(somaAssin * 12) + '/ano',
+        parcelas: this.brl(somaParc), parcelasQtd: recsAtivos.filter(r => r.tipo === 'parcela').length + ' parcelamentos · faltam ' + this.brl0(restParc),
+        lancado: this.brl(recLanc.reduce((a, r) => a + r.valor, 0)), lancadoQtd: recLanc.length + ' de ' + recsAtivos.length + ' já na fatura',
+        previsto: this.brl(recPrev.reduce((a, r) => a + r.valor, 0)),
+        previstoQtd: prox ? 'próxima: ' + prox.nome + ' · dia ' + prox.dia : 'nada previsto',
+        aviso: 'Somando o previsto, agosto fecha em ' + this.brl(despesas + recPrev.reduce((a, r) => a + r.valor, 0)) + ' de saídas.'
+      },
+      recRows, timeline,
+      filtroRec: chip([['todos', 'Todos'], ['assinaturas', 'Assinaturas'], ['parcelas', 'Parcelados']], s.fRec, v => this.setState({ fRec: v })),
+      novoRecV: {
+        nome: nr.nome, valor: nr.valor, dia: nr.dia, pt: nr.pt,
+        previa: nrVal > 0 ? (nr.tipo === 'assinatura' ? this.brl(nrVal) + '/mês em ' + nr.cartao + ' · lança dia ' + nr.dia : (Number(nr.pt) || 1) + '× ' + this.brl(nrVal) + ' = ' + this.brl(nrVal * (Number(nr.pt) || 1)) + ' · lança dia ' + nr.dia) : 'informe valor e o dia em que a cobrança cai na fatura'
+      },
+      recTipoOpts: [['assinatura', 'Assinatura'], ['parcela', 'Parcelado']].map(o => ({ label: o[1], ...chip([[o[0], o[1]]], nr.tipo, () => {})[0], bg: nr.tipo === o[0] ? 'rgba(255,255,255,.16)' : 'transparent', fg: nr.tipo === o[0] ? 'oklch(0.98 0.01 168)' : 'oklch(0.82 0.025 168)', onClick: () => this.setState(st => ({ novoRec: { ...st.novoRec, tipo: o[0] } })) })),
+      recCartaoOpts: ['Nubank Ultravioleta', 'Itaú Click', 'Inter Gold', 'Boleto · Itaú'].map(a => ({ label: a, ...opt(nr.cartao === a), onClick: () => this.setState(st => ({ novoRec: { ...st.novoRec, cartao: a } })) })),
+      recCatOpts: cats.map(c => ({ nome: c.nome, cor: c.cor, ...opt(nr.cat === c.nome), onClick: () => this.setState(st => ({ novoRec: { ...st.novoRec, cat: c.nome } })) })),
+      onRecNome: e => this.setState(st => ({ novoRec: { ...st.novoRec, nome: e.target.value } })),
+      onRecValor: e => this.setState(st => ({ novoRec: { ...st.novoRec, valor: e.target.value } })),
+      onRecDia: e => this.setState(st => ({ novoRec: { ...st.novoRec, dia: e.target.value } })),
+      onRecPt: e => this.setState(st => ({ novoRec: { ...st.novoRec, pt: e.target.value } })),
+      salvarRec: () => {
+        if (nrVal <= 0 || !nr.nome.trim()) return;
+        this.setState(st => ({ recs: [...st.recs, { nome: nr.nome.trim(), valor: nrVal, cat: nr.cat, cartao: nr.cartao, dia: Math.min(31, Math.max(1, Number(nr.dia) || 1)), tipo: nr.tipo, ativo: true, pa: 1, pt: Math.max(2, Number(nr.pt) || 12) }], novoRec: { ...st.novoRec, nome: '', valor: '' } }));
+      },
+
+      categorias: [...cats].sort((a, b) => b.real - a.real).map(c => {
+        const qtd = allTx.filter(t => t.cat === c.nome).length;
+        return {
+          nome: c.nome, cor: c.cor, grupo: c.grupo, meio: c.meio,
+          realFmt: this.brl(c.real),
+          barra: maiorCat ? ((c.real / maiorCat) * 100).toFixed(1) + '%' : '0%',
+          qtdFmt: qtd + (qtd === 1 ? ' lanç.' : ' lanç.'),
+          mediaFmt: qtd ? this.brl(c.real / qtd) : '—',
+          pctTotal: this.pct((c.real / despesas) * 100)
+        };
+      }),
+      catTotal: { real: this.brl(despesas), qtd: allTx.filter(t => t.tipo === 'despesa').length + ' lançamentos classificados', pct: this.pct((despesas / receitas) * 100) + ' da renda do mês' },
+      donut, catCount: String(cats.length),
+      gruposDetalhe: GRUPOS.map(g => {
+        const list = cats.filter(c => c.grupo === g);
+        const tot = list.reduce((a, c) => a + c.real, 0);
+        return {
+          nome: g, qtd: list.length + ' categorias', realFmt: this.brl(tot),
+          pctRenda: this.pct((tot / receitas) * 100),
+          pctSaidas: this.pct((tot / despesas) * 100) + ' das saídas',
+          w: ((tot / despesas) * 100).toFixed(1) + '%',
+          cor: g === 'Essencial' ? 'oklch(0.84 0.16 158)' : g === 'Qualidade de vida' ? 'oklch(0.80 0.14 88)' : 'oklch(0.74 0.12 230)',
+          aberto: s.grupoAberto === g,
+          onClick: () => this.setState(st => ({ grupoAberto: st.grupoAberto === g ? null : g })),
+          sinal: s.grupoAberto === g ? '−' : '+',
+          itens: list.sort((a, b) => b.real - a.real).map(c => {
+            const qtd = allTx.filter(t => t.cat === c.nome).length;
+            return {
+              nome: c.nome, cor: c.cor, meio: c.meio, realFmt: this.brl(c.real),
+              barra: tot ? ((c.real / tot) * 100).toFixed(1) + '%' : '0%',
+              pctGrupo: this.pct(tot ? (c.real / tot) * 100 : 0),
+              qtdFmt: qtd + ' lanç.',
+              mediaFmt: qtd ? this.brl(c.real / qtd) : '—'
+            };
+          })
+        };
+      }),
+      novaCatV: {
+        nome: nc.nome,
+        previa: nc.nome.trim() ? nc.nome.trim() + ' entra no grupo ' + nc.grupo + ' e já aparece no seletor de lançamentos' : 'dê um nome à categoria (ex. Terapia, Cursos, Presentes)',
+        btnBg: nc.nome.trim().length > 1 ? 'linear-gradient(135deg,oklch(0.86 0.17 155),oklch(0.74 0.15 172))' : 'rgba(255,255,255,.10)',
+        btnFg: nc.nome.trim().length > 1 ? 'oklch(0.22 0.05 168)' : 'oklch(0.74 0.02 168)'
+      },
+      grupoOpts: GRUPOS.map(g => ({ label: g, ...opt(nc.grupo === g), onClick: () => this.setState(st => ({ novaCat: { ...st.novaCat, grupo: g } })) })),
+      paleta: PALETA.map(p => ({ cor: p, borda: nc.cor === p ? 'oklch(0.98 0.01 168)' : 'transparent', onClick: () => this.setState(st => ({ novaCat: { ...st.novaCat, cor: p } })) })),
+      onCatNome: e => this.setState(st => ({ novaCat: { ...st.novaCat, nome: e.target.value } })),
+      onCatOrc: e => this.setState(st => ({ novaCat: { ...st.novaCat, orc: e.target.value } })),
+      salvarCat: () => {
+        const nome = nc.nome.trim();
+        if (nome.length < 2 || s.cats.some(c => c.nome.toLowerCase() === nome.toLowerCase())) return;
+        this.setState(st => ({ cats: [...st.cats, { nome, grupo: st.novaCat.grupo, orc: 0, real: 0, meio: 'a definir', cor: st.novaCat.cor }], novaCat: { nome: '', orc: '', grupo: st.novaCat.grupo, cor: PALETA[(st.cats.length + 1) % PALETA.length] } }));
+      },
+
+      inv: {
+        total: this.brl(invTotal), aplicado: this.brl0(invAplicado),
+        ganho: (invTotal - invAplicado >= 0 ? '+ ' : '− ') + this.brl(Math.abs(invTotal - invAplicado)),
+        ganhoPct: '+' + this.pct((invTotal / invAplicado - 1) * 100) + ' sobre o aplicado',
+        rendMes: (rendMes >= 0 ? '+ ' : '− ') + this.brl(Math.abs(rendMes)),
+        rendMesPct: this.pct((rendMes / invTotal) * 100) + ' no mês · reinvestido',
+        prov: this.brl(provMes), provNota: 'dividendos e aluguéis · reinvestidos automaticamente',
+        aporte: this.brl(aporte), aporteNota: this.pct((aporte / receitas) * 100) + ' da renda · única linha que sai do caixa',
+        reserva: (18400 / despesas).toFixed(1).replace('.', ',') + ' meses de custo coberto'
+      },
+      notaInvest: 'Rendimento, dividendos e valorização ficam dentro da carteira e são reinvestidos — não aparecem como receita do mês. O fluxo de caixa só é afetado quando você aporta (saída) ou resgata (entrada).',
+      segmentos, ativos,
+      caixinhas: CAIXINHAS.map(k => ({ nome: k.nome, cor: k.cor, valorFmt: this.brl0(k.valor), metaFmt: this.brl0(k.meta), w: ((k.valor / k.meta) * 100).toFixed(1) + '%', pct: Math.round((k.valor / k.meta) * 100) + '%', prazo: k.prazo })),
+
+      modalOpen: s.modal,
+      closeModal: () => this.setState({ modal: false }),
+      tipoOpts: [['despesa', 'Despesa'], ['receita', 'Receita'], ['aporte', 'Aporte']].map(o => ({ label: o[1], bg: nv.tipo === o[0] ? 'rgba(255,255,255,.16)' : 'transparent', fg: nv.tipo === o[0] ? 'oklch(0.98 0.01 168)' : 'oklch(0.82 0.025 168)', onClick: () => this.setState(st => ({ novo: { ...st.novo, tipo: o[0] } })) })),
+      catOpts: cats.map(c => ({ nome: c.nome, cor: c.cor, ...opt(nv.cat === c.nome), onClick: () => this.setState(st => ({ novo: { ...st.novo, cat: c.nome } })) })),
+      metodoOpts: ['Pix', 'Débito', 'Crédito', 'Boleto', 'Dinheiro'].map(m => ({ label: m, ...opt(nv.metodo === m), onClick: () => this.setState(st => ({ novo: { ...st.novo, metodo: m } })) })),
+      contaOpts: ['Nubank · Conta', 'Itaú · Conta', 'Nubank Ultravioleta', 'Itaú Click', 'Inter Gold'].map(a => ({ label: a, ...opt(nv.conta === a), onClick: () => this.setState(st => ({ novo: { ...st.novo, conta: a } })) })),
+      novoV: {
+        valor: nv.valor, desc: nv.desc, data: nv.data, parcelas: nv.parcelas,
+        recTrack: nv.rec ? 'oklch(0.84 0.16 158)' : 'rgba(255,255,255,.18)', recX: nv.rec ? '14px' : '2px',
+        recBorda: nv.rec ? 'oklch(0.84 0.15 158)' : 'rgba(255,255,255,.11)',
+        previa: nvVal > 0 ? (nvParc > 1 ? nvParc + '× ' + this.brl(nvVal / nvParc) + ' = ' + this.brl(nvVal) : this.brl(nvVal)) + ' · ' + nv.cat + ' · ' + nv.metodo + ' · ' + nv.conta + (nv.rec ? ' · repete todo mês' : '') : 'preencha o valor para ver a prévia',
+        dica: nv.tipo === 'despesa' ? 'entra no orçamento de ' + nv.cat : nv.tipo === 'receita' ? 'soma às receitas de agosto' : 'sai do caixa e entra na carteira'
+      },
+      onNovoValor: e => this.setState(st => ({ novo: { ...st.novo, valor: e.target.value } })),
+      onNovoDesc: e => this.setState(st => ({ novo: { ...st.novo, desc: e.target.value } })),
+      onNovoData: e => this.setState(st => ({ novo: { ...st.novo, data: e.target.value } })),
+      onNovoParc: e => this.setState(st => ({ novo: { ...st.novo, parcelas: e.target.value } })),
+      toggleRec: () => this.setState(st => ({ novo: { ...st.novo, rec: !st.novo.rec } })),
+      salvar: () => {
+        if (nvVal <= 0) return;
+        const t = { data: nv.data.slice(0, 5), desc: nv.desc || 'Lançamento sem descrição', cat: nv.tipo === 'receita' ? 'Renda' : nv.tipo === 'aporte' ? 'Aporte' : nv.cat, metodo: nv.metodo, conta: nv.conta, parc: nvParc > 1 ? '1/' + nvParc : '—', tipo: nv.tipo, status: nv.metodo === 'Crédito' ? 'na fatura' : nv.tipo === 'receita' ? 'recebido' : 'pago', valor: nvVal };
+        this.setState(st => ({ extras: [t, ...st.extras], modal: false, tab: 'lanc', novo: { ...st.novo, valor: '', desc: '' } }));
+      },
+      navMes: [navMk('visao', 'Visão geral', ''), navMk('lanc', 'Lançamentos', String(allTx.length)), navMk('contas', 'Contas a pagar', String(bills.filter(b => !b.pago).length), 'oklch(0.82 0.14 45)'), navMk('cartoes', 'Cartões', String(cardsAbertas.length) + '/' + s.cards.length), navMk('rec', 'Assinaturas', String(recPrev.length), 'oklch(0.82 0.14 45)'), navMk('cat', 'Categorias', String(cats.length))],
+      navPat: [navMk('invest', 'Investimentos', '+' + this.pct((rendMes / invTotal) * 100), 'oklch(0.86 0.15 158)')],
+      goCat: () => this.setState({ tab: 'cat' }),
+      goLanc: () => this.setState({ tab: 'lanc' }),
+      openModal: () => this.setState({ modal: true }),
+      busca: s.busca, onBusca: e => this.setState({ busca: e.target.value }),
+      privLabel: s.priv ? 'Mostrar valores' : 'Ocultar valores',
+      togglePriv: () => this.setState(st => ({ priv: !st.priv })),
+      heroPatrimonio: this.brl0(invTotal + CONTAS.reduce((a, x) => a + x.valor, 0)),
+      heroRend: '+ ' + this.brl(rendMes) + ' no mês · reinvestido',
+      notaRendimento: 'Rendimento da carteira (' + this.brl(rendMes) + ' em agosto, sendo ' + this.brl(provMes) + ' de proventos) é reinvestido e NÃO entra no fluxo do mês. Do caixa sai apenas o aporte de ' + this.brl(aporte) + ' — resgates, quando houver, entram como receita.',
+      kpis: [
+        { label: 'Receitas do mês', valor: this.brl(receitas), nota: 'salário + freelas · +4,2% vs. jul', cor: 'oklch(0.88 0.15 158)', bg: 'rgba(255,255,255,.055)', borda: 'rgba(255,255,255,.10)' },
+        { label: 'Despesas do mês', valor: this.brl(despesas), nota: this.pct((despesas / receitas) * 100) + ' da renda · ' + cats.length + ' categorias', cor: 'oklch(0.82 0.14 30)', bg: 'rgba(255,255,255,.055)', borda: 'rgba(255,255,255,.10)' },
+        { label: 'Livre para gastar', valor: this.brl(livre), nota: 'após contas e aporte · ' + this.brl0(livre / 30) + '/dia', cor: 'oklch(0.22 0.05 168)', bg: 'linear-gradient(140deg,oklch(0.88 0.17 155),oklch(0.74 0.15 172))', borda: 'rgba(255,255,255,.30)' },
+        { label: 'Aporte do mês', valor: this.brl(aporte), nota: this.pct((aporte / receitas) * 100) + ' da renda · saída de caixa', cor: 'oklch(0.82 0.12 210)', bg: 'rgba(255,255,255,.055)', borda: 'rgba(255,255,255,.10)' }
+      ],
+      grupos, fluxo, ultimos: TX.slice(0, 6).map(txRow),
+      comprometido: comprometido.map(c => ({ nome: c.nome, cor: c.cor, valorFmt: this.brl(c.v), pct: this.pct((c.v / receitas) * 100), w: ((c.v / receitas) * 100).toFixed(2) + '%' })),
+      comprometidoNota: 'renda de ' + this.brl(receitas) + ' · ' + this.pct(((despesas + aporte) / receitas) * 100) + ' comprometida',
+      contas: CONTAS.map(a => ({ ...a, valorFmt: this.brl(a.valor) })),
+      saldoTotal: this.brl(CONTAS.reduce((a, x) => a + x.valor, 0)),
+      due7Total: this.brl(due.reduce((a, x) => a + x.b.valor, 0)),
+      due7: due.map(({ b, i }) => ({
+        dia: String(b.dia).padStart(2, '0'), nome: b.nome, valorFmt: this.brl(b.valor),
+        tags: (b.fixo ? 'fixa' : 'variável') + ' · ' + (b.auto ? 'auto' : 'manual') + ' · ' + b.cat,
+        acao: b.auto ? 'auto' : 'pagar', onPay: () => toggleBill(i)
+      }))
+    };
+  }
+}
+</script>
+</body>
+</html>

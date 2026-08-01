@@ -12,4 +12,7 @@
 
 export * from "./core";
 export * from "./enums";
+export * from "./investments";
+export * from "./recurrence";
+export * from "./system";
 export * from "./transactions";

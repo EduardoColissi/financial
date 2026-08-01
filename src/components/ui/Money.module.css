@@ -1,0 +1,81 @@
+.money {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.mask {
+  display: none;
+}
+
+/*
+ * O toggle "Ocultar valores" apenas marca o <html>. Trocar a visibilidade em
+ * CSS mantem `Money` como Server Component e faz o toggle ser instantaneo, sem
+ * ida ao servidor.
+ *
+ * ATENCAO, decisao consciente do dono: a mascara e' COSMETICA. O valor real
+ * continua no HTML e aparece em "ver codigo-fonte". Serve contra quem olha por
+ * cima do ombro, nao contra quem inspeciona a pagina. Nao "corrigir" isso para
+ * mascaramento no servidor sem uma nova decisao — o custo seria um round-trip
+ * a cada clique.
+ */
+:global(html[data-hide-values="true"]) .value {
+  display: none;
+}
+
+:global(html[data-hide-values="true"]) .mask {
+  display: inline;
+}
+
+.xl {
+  font-size: 29px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.lg {
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.md {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.sm {
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.xs {
+  font-family: var(--font-mono-stack);
+  font-size: 10.5px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.default {
+  color: var(--fg);
+}
+.pos {
+  color: var(--pos);
+}
+.neg {
+  color: var(--neg);
+}
+.info {
+  color: var(--info);
+}
+.muted {
+  color: var(--fg-mut);
+}
+.onAccent {
+  color: var(--on-accent);
+}

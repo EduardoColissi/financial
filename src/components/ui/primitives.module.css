@@ -1,0 +1,97 @@
+/* Card de vidro — o padrao visual mais repetido do design (~20 ocorrencias). */
+.card {
+  background: var(--surface);
+  backdrop-filter: blur(var(--blur-card));
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-11);
+}
+
+.padNone {
+  padding: 0;
+}
+.padSm {
+  padding: 14px 18px;
+}
+.padMd {
+  padding: 18px;
+}
+.padLg {
+  padding: 17px 18px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.sectionTitle {
+  font-family: var(--font-sans-stack);
+  font-weight: 600;
+  font-size: 13.5px;
+  line-height: 1;
+  color: var(--fg);
+}
+
+.sectionSub {
+  font-family: var(--font-sans-stack);
+  font-weight: 400;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--fg-mut-2);
+  margin-top: 4px;
+}
+
+.microLabel {
+  font-family: var(--font-sans-stack);
+  font-weight: 600;
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mut-2);
+}
+
+.dot {
+  display: block;
+  flex: none;
+  border-radius: 3px;
+  width: var(--dot-size);
+  height: var(--dot-size);
+  background: var(--dot-color);
+}
+
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 18px;
+  font-family: var(--font-mono-stack);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  text-align: center;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface);
+  backdrop-filter: blur(var(--blur-card));
+  -webkit-backdrop-filter: blur(var(--blur-card));
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-11);
+  padding: 14px 18px;
+}
+
+.noticeText {
+  font-family: var(--font-sans-stack);
+  font-weight: 400;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--fg-4);
+}

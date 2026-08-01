@@ -1,0 +1,66 @@
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.track {
+  width: 100%;
+  height: var(--bar-h);
+  border-radius: var(--r-full);
+  background: var(--track);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  /* Largura vem como custom property, nunca como declaracao inline completa:
+     assim :hover e @media continuam possiveis. */
+  width: var(--bar-w);
+  background: var(--bar-color);
+  border-radius: inherit;
+}
+
+.stacked {
+  display: flex;
+  width: 100%;
+  height: var(--bar-h);
+  border-radius: var(--r-full);
+  background: var(--track);
+  overflow: hidden;
+  gap: var(--bar-gap);
+}
+
+.segment {
+  height: 100%;
+  flex: 0 0 var(--seg-w);
+  background: var(--seg-color);
+  min-width: 0;
+}
+
+/*
+ * A ultima fatia estica. Somar `toFixed(2)` nunca fecha exatamente 100%, e sem
+ * isto sobra uma frincha visivel na direita da barra.
+ */
+.segment:last-child {
+  flex: 1 1 auto;
+}
+
+.pillBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pillBarLabel {
+  font-family: var(--font-mono-stack);
+  font-size: 10px;
+  color: var(--fg-mut);
+  white-space: nowrap;
+}

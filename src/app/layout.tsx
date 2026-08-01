@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { HidePreferenceScript } from "@/features/shell/shell.client";
 import { mono, sans } from "./fonts";
 
 export const metadata: Metadata = {
@@ -17,6 +18,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="pt-BR" className={`${sans.variable} ${mono.variable}`}>
+      <head>
+        <HidePreferenceScript />
+      </head>
       <body>{children}</body>
     </html>
   );

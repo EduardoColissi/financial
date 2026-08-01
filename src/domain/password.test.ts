@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hashPassword, verifyPassword } from "../../scripts/hash-password";
+import { hashPassword, verifyPassword } from "./password";
 
 describe("hash da passphrase", () => {
   const senha = "uma frase longa e bem aleatoria 2026";

@@ -262,6 +262,18 @@ export function todayInTimeZone(
   return plainDate(formatterFor(timeZone).format(new Date()));
 }
 
+/**
+ * O instante de agora, sem fuso envolvido.
+ *
+ * Existe para prazo de sessao e carimbo de tentativa de login — coisas medidas
+ * em tempo absoluto, nao em data civil. Fica aqui junto com `todayInTimeZone`
+ * para que `new Date()` continue existindo num arquivo so' do projeto: e' o que
+ * torna "o app usa o relogio errado" uma busca de um grep.
+ */
+export function nowInstant(): Date {
+  return new Date();
+}
+
 // ── rotulos ──────────────────────────────────────────────────────────────────
 
 const monthNameFmt = new Intl.DateTimeFormat("pt-BR", { month: "long", timeZone: "UTC" });

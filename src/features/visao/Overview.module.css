@@ -1,0 +1,267 @@
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 17px 18px;
+  border-radius: var(--r-11);
+  border: 1px solid var(--stroke);
+  background: var(--surface);
+  backdrop-filter: blur(var(--blur-card));
+  -webkit-backdrop-filter: blur(var(--blur-card));
+}
+
+/* O terceiro KPI ("Livre para gastar") e' o unico solido no design. */
+.kpiHero {
+  background: var(--grad-hero);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.kpiNote {
+  font-family: var(--font-mono-stack);
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--fg-mut);
+}
+
+.kpiHero .kpiNote {
+  color: rgba(11, 31, 25, 0.72);
+}
+
+.kpiHero .kpiLabel {
+  color: rgba(11, 31, 25, 0.66);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* ── grafico de fluxo ─────────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  gap: 14px;
+  font-family: var(--font-mono-stack);
+  font-size: 10px;
+  color: var(--fg-mut);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legendSwatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: block;
+  background: var(--swatch);
+}
+
+.chart {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  align-items: end;
+  height: 184px;
+  border-bottom: 1px solid var(--stroke-strong);
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 100%;
+  justify-content: center;
+}
+
+.bar {
+  width: 16px;
+  border-radius: 4px 4px 0 0;
+  height: var(--h);
+}
+
+.barIn {
+  background: var(--grad-bar-in);
+}
+.barOut {
+  background: var(--grad-bar-out);
+}
+.barInv {
+  background: var(--grad-bar-inv);
+}
+
+.chartLabels {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  margin-top: 11px;
+}
+
+.chartLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.chartMonth {
+  font-weight: 500;
+  font-size: 10.5px;
+}
+
+.chartBalance {
+  font-family: var(--font-mono-stack);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--pos-dim);
+}
+
+/* ── listas ───────────────────────────────────────────────────────────────── */
+
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.listRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--stroke-soft);
+}
+
+.listRow:last-child {
+  border-bottom: none;
+}
+
+.listMain {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.listName {
+  font-weight: 500;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listMeta {
+  font-family: var(--font-mono-stack);
+  font-size: 9.5px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+
+.groupRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--stroke-soft);
+}
+
+.groupRow:last-child {
+  border-bottom: none;
+}
+
+.groupHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.groupName {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.groupCats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 2px;
+}
+
+.groupCat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--fg-mut);
+}
+
+.allocRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+}
+
+.allocLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--stroke-soft);
+}
+
+.account:last-child {
+  border-bottom: none;
+}
+
+.accountBadge {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-4);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono-stack);
+  font-weight: 600;
+  font-size: 10px;
+  color: var(--on-accent);
+  background: var(--badge-color);
+  flex: none;
+}
+
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  margin-top: 4px;
+  border-top: 1px solid var(--stroke);
+}

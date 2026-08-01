@@ -1,3 +1,8 @@
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+
+# esbuild precisa do postinstall para baixar o binario da plataforma.
+# Sem isso o vitest quebra em runtime (build verde, teste falhando).
+onlyBuiltDependencies:
+  - esbuild

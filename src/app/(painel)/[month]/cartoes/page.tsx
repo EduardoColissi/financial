@@ -1,10 +1,16 @@
-import { TabPlaceholder } from "@/features/shell/Shell";
+import { notFound } from "next/navigation";
+import { parseMonthParam } from "@/domain/period";
+import { Cards } from "@/features/cartoes/Cards";
+import { getCards } from "@/services/cards";
+import { getContext } from "@/services/context";
 
-export default function CartoesPage() {
-  return (
-    <TabPlaceholder
-      title="Cartões de crédito"
-      note="Os quatro números da fatura, limite, parcelas e melhor dia — passo 17."
-    />
-  );
+export default async function CartoesPage({ params }: { params: Promise<{ month: string }> }) {
+  const { month: raw } = await params;
+  const month = parseMonthParam(raw);
+  if (!month) notFound();
+
+  const ctx = await getContext();
+  const data = await getCards(ctx, month);
+
+  return <Cards data={data} />;
 }

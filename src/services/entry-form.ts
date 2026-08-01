@@ -1,0 +1,81 @@
+import "server-only";
+import { and, asc, eq, isNull } from "drizzle-orm";
+import { db } from "@/db/client";
+import { accounts, categories, creditCards } from "@/db/schema";
+import { firstDayOf, monthOf, type PlainDate, type RefMonth } from "@/domain/period";
+import type { AppContext } from "./context";
+
+/**
+ * O que o modal de novo lancamento precisa saber para se desenhar.
+ *
+ * Categoria, conta e cartao sao DADO, nao constante: o design crava as cinco
+ * contas e os onze nomes de categoria no HTML (linhas 1532-1533), e por isso
+ * criar uma categoria nova nao a faz aparecer no modal.
+ */
+
+export interface OptionRow {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export interface CategoryOption extends OptionRow {
+  kind: "expense" | "income" | "investment";
+}
+
+export interface EntryFormOptions {
+  categories: CategoryOption[];
+  accounts: OptionRow[];
+  cards: OptionRow[];
+  /** Data ja' preenchida no formulario. */
+  defaultDate: PlainDate;
+}
+
+/**
+ * Data sugerida: hoje quando se esta' olhando o mes corrente, dia 1 caso
+ * contrario.
+ *
+ * Abrir marco de 2027 e o formulario oferecer "hoje" faria o lancamento cair num
+ * mes que nao e' o que esta' na tela — e o usuario so' descobriria depois de
+ * salvar, ao nao encontrar a linha.
+ */
+export function defaultEntryDate(ctx: AppContext, month: RefMonth): PlainDate {
+  return monthOf(ctx.today) === month ? ctx.today : firstDayOf(month);
+}
+
+export async function getEntryFormOptions(
+  ctx: AppContext,
+  month: RefMonth
+): Promise<EntryFormOptions> {
+  const [cats, accs, cards] = await Promise.all([
+    db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        color: categories.color,
+        kind: categories.kind,
+      })
+      .from(categories)
+      .where(and(eq(categories.userId, ctx.userId), isNull(categories.archivedAt)))
+      .orderBy(asc(categories.sortOrder), asc(categories.name)),
+
+    db
+      .select({ id: accounts.id, name: accounts.name, color: accounts.color })
+      .from(accounts)
+      .where(and(eq(accounts.userId, ctx.userId), isNull(accounts.archivedAt)))
+      .orderBy(asc(accounts.sortOrder)),
+
+    db
+      .select({ id: creditCards.id, name: creditCards.name, color: creditCards.color })
+      .from(creditCards)
+      .where(and(eq(creditCards.userId, ctx.userId), isNull(creditCards.archivedAt)))
+      .orderBy(asc(creditCards.sortOrder)),
+  ]);
+
+  return {
+    categories: cats,
+    accounts: accs,
+    cards,
+    defaultDate: defaultEntryDate(ctx, month),
+  };
+}

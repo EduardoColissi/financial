@@ -1,5 +1,6 @@
 import "server-only";
 import { eq } from "drizzle-orm";
+import { redirect } from "next/navigation";
 import { cache } from "react";
 import { db } from "@/db/client";
 import { appSettings, users } from "@/db/schema";
@@ -13,6 +14,7 @@ import {
   todayInTimeZone,
 } from "@/domain/period";
 import { env } from "@/lib/env";
+import { requireSession } from "./auth";
 
 /**
  * Contexto de requisicao.
@@ -43,11 +45,16 @@ export class NoUserError extends Error {
  * quando houver login de verdade, so' esta funcao muda.
  */
 export const getContext = cache(async (): Promise<AppContext> => {
-  const row = env.SINGLE_USER_ID
-    ? await db.query.users.findFirst({ where: eq(users.id, env.SINGLE_USER_ID) })
-    : await db.query.users.findFirst();
+  // Camada 2 do gate. Toda leitura do painel passa por aqui, entao exigir a
+  // sessao neste ponto cobre as sete abas de uma vez — sem depender de o
+  // matcher do `proxy.ts` continuar correto depois do proximo refactor.
+  const session = await requireSession();
 
-  if (!row) throw new NoUserError();
+  const row = await db.query.users.findFirst({ where: eq(users.id, session.sub) });
+
+  // Sessao valida apontando para usuario que nao existe mais (banco recriado
+  // pelo seed, por exemplo): o cookie e' lixo, mande refazer o login.
+  if (!row) redirect("/login");
 
   const settings = await db.query.appSettings.findFirst({
     where: eq(appSettings.userId, row.id),

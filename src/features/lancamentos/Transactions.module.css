@@ -1,0 +1,135 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-7);
+  padding: 3px;
+  margin: 0;
+  min-width: 0;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.chip {
+  border: none;
+  background: transparent;
+  border-radius: var(--r-4);
+  padding: 7px 11px;
+  font-weight: 500;
+  font-size: 11.5px;
+  line-height: 1;
+  color: var(--fg-mut);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  color: var(--fg);
+}
+
+.chipActive {
+  background: var(--surface-4);
+  color: var(--fg);
+}
+
+.summary {
+  font-family: var(--font-mono-stack);
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--fg-mut);
+}
+
+.table {
+  width: 100%;
+  font-size: 12px;
+}
+
+.th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mut-2);
+  padding: 0 12px 10px;
+  border-bottom: 1px solid var(--stroke);
+  white-space: nowrap;
+}
+
+.thRight {
+  text-align: right;
+}
+
+.td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--stroke-soft);
+  vertical-align: middle;
+}
+
+.tdRight {
+  text-align: right;
+}
+
+.row:hover .td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.date {
+  font-family: var(--font-mono-stack);
+  font-size: 10.5px;
+  color: var(--fg-mut);
+  white-space: nowrap;
+}
+
+.desc {
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.cat {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--fg-mut);
+  white-space: nowrap;
+}
+
+.mono {
+  font-family: var(--font-mono-stack);
+  font-size: 10.5px;
+  color: var(--fg-mut);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 12px 0;
+  font-family: var(--font-mono-stack);
+  font-size: 10.5px;
+  color: var(--fg-mut);
+}

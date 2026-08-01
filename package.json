@@ -14,21 +14,32 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "e2e": "playwright test",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test"
+    "verify": "pnpm typecheck && pnpm lint && pnpm test",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:reset": "tsx scripts/reset.ts",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "drizzle-orm": "^0.45.2",
     "next": "16.2.12",
+    "pg": "^8.22.0",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "server-only": "^0.0.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.6",
     "@playwright/test": "^1.62.1",
     "@types/node": "^20",
+    "@types/pg": "^8.20.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.10",
     "dotenv": "^17.4.2",
+    "drizzle-kit": "^0.31.10",
     "tsx": "^4.23.1",
     "typescript": "^5",
     "vitest": "^4.1.10"

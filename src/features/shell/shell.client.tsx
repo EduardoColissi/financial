@@ -136,6 +136,14 @@ export function SearchBox() {
   const [value, setValue] = useState(params.get("q") ?? "");
 
   useEffect(() => {
+    // Sai cedo quando a URL ja' diz o que a caixa diz.
+    //
+    // Sem esta linha o efeito disparava um `router.replace` em TODA montagem,
+    // inclusive com a busca vazia — e um clique numa aba feito nos 250 ms
+    // seguintes era desfeito pela navegacao atrasada, jogando o usuario de
+    // volta para a aba anterior. Pego pelo E2E de navegacao.
+    if (value === (params.get("q") ?? "")) return;
+
     const id = setTimeout(() => {
       const next = new URLSearchParams(params.toString());
       if (value) next.set("q", value);
@@ -144,8 +152,7 @@ export function SearchBox() {
       router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     }, 250);
     return () => clearTimeout(id);
-    // `params` muda a cada navegacao; incluir causaria loop.
-  }, [value, pathname, router, params.toString]);
+  }, [value, pathname, router, params]);
 
   return (
     <div className={s.searchBox}>

@@ -1,10 +1,17 @@
-import { TabPlaceholder } from "@/features/shell/Shell";
+import { notFound } from "next/navigation";
+import { parseMonthParam } from "@/domain/period";
+import { Categories } from "@/features/categorias/Categories";
+import { getContext } from "@/services/context";
+import { getOverview } from "@/services/overview";
+import { getCategories } from "@/services/queries";
 
-export default function CategoriasPage() {
-  return (
-    <TabPlaceholder
-      title="Categorias"
-      note="Donut, grupos expansíveis e orçado × realizado — passos 18 e 20."
-    />
-  );
+export default async function CategoriasPage({ params }: { params: Promise<{ month: string }> }) {
+  const { month: raw } = await params;
+  const month = parseMonthParam(raw);
+  if (!month) notFound();
+
+  const ctx = await getContext();
+  const [data, overview] = await Promise.all([getCategories(ctx, month), getOverview(ctx, month)]);
+
+  return <Categories data={data} incomeCents={overview.incomeCents} />;
 }

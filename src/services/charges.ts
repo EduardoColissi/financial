@@ -70,7 +70,7 @@ export interface SubscriptionsResult {
   timeline: Array<{
     day: number;
     today: boolean;
-    marks: Array<{ color: string; posted: boolean }>;
+    marks: Array<{ id: string; color: string; posted: boolean }>;
   }>;
 }
 
@@ -214,6 +214,7 @@ export async function getSubscriptions(
       day,
       today: ctx.today.slice(0, 7) === month && partsOfDate(ctx.today).day === day,
       marks: onDay.map((c) => ({
+        id: c.id,
         color: isInstallment(c) ? "var(--info-bar)" : c.categoryColor,
         posted: c.phase !== "prevista",
       })),

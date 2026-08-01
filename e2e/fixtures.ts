@@ -33,7 +33,9 @@ export const STORAGE_STATE = "e2e/.auth/state.json";
 function authSecret(): string {
   let doArquivo: string | undefined;
   try {
-    doArquivo = readFileSync(".env.local", "utf8").match(/^AUTH_SECRET=(.*)$/m)?.[1]?.trim();
+    doArquivo = readFileSync(".env.local", "utf8")
+      .match(/^AUTH_SECRET=(.*)$/m)?.[1]
+      ?.trim();
   } catch {
     // Sem .env.local (CI): cai no ambiente.
   }

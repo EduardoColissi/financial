@@ -94,9 +94,9 @@ test("passphrase errada nao cria sessao", async ({ page }) => {
   // coisa entregaria informacao de graca a quem esta' tentando.
   // `.filter` porque o Next mantem um <div role="alert"> vazio para anunciar
   // troca de rota — sem isso o seletor casa com dois elementos.
-  await expect(
-    page.getByRole("alert").filter({ hasText: "Passphrase" })
-  ).toHaveText("Passphrase incorreta.");
+  await expect(page.getByRole("alert").filter({ hasText: "Passphrase" })).toHaveText(
+    "Passphrase incorreta."
+  );
   await expect(page).toHaveURL(/\/login/);
 
   await page.goto("/2026-08");

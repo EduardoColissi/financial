@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { withoutBlanks } from "./env-input";
 
 /**
  * Leitura validada do ambiente.
@@ -37,12 +38,20 @@ const schema = z.object({
 });
 
 function load() {
-  const parsed = schema.safeParse(process.env);
+  // `withoutBlanks` antes do parse: variavel declarada vazia na Vercel chega
+  // como "" e reprovaria em `min(1)` — ver o modulo para o porque.
+  const parsed = schema.safeParse(withoutBlanks(process.env));
   if (!parsed.success) {
     const issues = parsed.error.issues
       .map((i) => `  ${i.path.join(".") || "(raiz)"}: ${i.message}`)
       .join("\n");
-    throw new Error(`Variaveis de ambiente invalidas:\n${issues}`);
+    // A dica de onde configurar vai junto: este erro costuma aparecer no log de
+    // build da Vercel, onde a mensagem crua nao diz o que fazer a respeito.
+    throw new Error(
+      `Variaveis de ambiente invalidas:\n${issues}\n` +
+        "Local: preencha o .env.local (modelo em .env.example). " +
+        "Vercel: Settings > Environment Variables, no ambiente do deploy."
+    );
   }
   return parsed.data;
 }

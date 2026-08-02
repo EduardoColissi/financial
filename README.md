@@ -104,13 +104,23 @@ Authentication* achando que ela protege produção — ela só protege previews.
 
    | Variável | Production | Preview | Observação |
    |---|---|---|---|
-   | `DATABASE_URL` | pooler da branch `main` | pooler da branch `dev` | |
-   | `DATABASE_URL_UNPOOLED` | direta da `main` | direta da `dev` | migrations |
+   | `DATABASE_URL` | pooler da branch `main` | pooler da branch `dev` | **sem ela o build falha**, não só o runtime |
    | `AUTH_SECRET` | valor A | valor B | 32 bytes, distintos |
    | `APP_PASSWORD_HASH` | `pnpm auth:hash` | idem | a senha em claro nunca sai da sua máquina |
    | `CRON_SECRET` | gerado pela Vercel | — | sem ele `/api/cron/daily` recusa tudo |
-   | `APP_TIMEZONE` | `America/Sao_Paulo` | idem | |
-   | `APP_FAKE_TODAY` | **vazia** | vazia | ignorada em produção de qualquer forma |
+   | `APP_TIMEZONE` | `America/Sao_Paulo` | idem | tem default; declarar é explicitação |
+   | `SESSION_MAX_AGE_DAYS` | opcional | opcional | default 30 |
+   | `SINGLE_USER_ID` | opcional | opcional | sem ela, o login usa o primeiro usuário — que é o único |
+
+   Não declare na Vercel: `DATABASE_URL_UNPOOLED` (só os scripts de migration a
+   usam, e eles rodam da sua máquina) nem `APP_FAKE_TODAY` (ignorada em produção).
+
+   **`DATABASE_URL` é lida no build.** O `next build` importa cada rota para
+   coletar a configuração, e `lib/env.ts` valida o ambiente no import — sem ela o
+   deploy morre em `Failed to collect page data for /[month]`, que não cita a
+   variável. Declarar uma variável **com valor vazio** equivale a declarar `""`,
+   não a omitir; `withoutBlanks` trata isso, mas o hábito seguro é não criar a
+   linha.
 
 5. **Vercel Authentication ligada** — protege os previews (produção continua
    pública; quem protege ela é o gate acima).

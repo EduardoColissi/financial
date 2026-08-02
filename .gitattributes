@@ -1,0 +1,13 @@
+# Fim de linha LF na copia de trabalho, em qualquer sistema.
+#
+# Esta maquina tem `core.autocrlf=true` global: sem este arquivo, todo checkout
+# materializa a arvore em CRLF, o Biome (que formata em LF) reprova os 121
+# arquivos, e `pnpm verify` fica vermelho sem ninguem ter tocado em codigo.
+# O CI nao pegaria: roda em Linux, onde a conversao nao acontece.
+* text=auto eol=lf
+
+# Binarios nao passam por conversao nenhuma.
+*.woff2 binary
+*.ico   binary
+*.png   binary
+*.jpg   binary

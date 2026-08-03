@@ -62,6 +62,7 @@ Não use `podman compose` — nesta máquina ele cai no `docker-compose.exe` e e
 | `pnpm verify` | `typecheck` + `lint` + testes unitários |
 | `pnpm e2e` | Playwright (sobe o próprio servidor na 3006 e refaz o seed) |
 | `pnpm db:migrate` / `db:seed` / `db:reset` | schema e dados |
+| `pnpm db:bootstrap` | cria só o usuário único, sem dados — é o que serve para produção |
 | `pnpm db:clear-attempts` | destrava o login depois de 5 tentativas erradas (só local) |
 | `pnpm auth:hash` | gera `APP_PASSWORD_HASH` e `AUTH_SECRET` (interativo) |
 
@@ -99,6 +100,21 @@ Authentication* achando que ela protege produção — ela só protege previews.
    só 6 horas — sem o branch, uma migration destrutiva não tem volta.
 3. **Migrations rodam da sua máquina**, apontando para a branch alvo:
    `pnpm db:migrate`. Nunca no build da Vercel — o build roda em todo preview.
+
+   Migrar cria as tabelas e mais nada: `users` fica vazia, e o login responde
+   *"o banco não tem nenhum usuário"* mesmo com as variáveis todas certas.
+   `pnpm db:seed` **não** resolve — ele apaga e recria os dados do design, então
+   recusa banco remoto de propósito. Quem cria o usuário em produção é
+   `pnpm db:bootstrap`, aditivo e idempotente:
+
+   ```powershell
+   $env:DATABASE_URL_UNPOOLED = "<string DIRETA da branch main do Neon>"
+   pnpm db:migrate
+   pnpm db:bootstrap --email=voce@exemplo.com --name="Seu Nome"
+   ```
+
+   As contas, categorias e cartões você cria pela interface — produção não recebe
+   os dados fabricados do design.
 4. **Variáveis na Vercel**, nos três ambientes. `AUTH_SECRET` **diferente por
    ambiente**, senão um cookie de preview abre produção:
 

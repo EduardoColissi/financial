@@ -71,7 +71,7 @@ const MAX_ATTEMPTS = 5;
 
 export type LoginResult =
   | { ok: true }
-  | { ok: false; reason: "wrong" | "rate-limited" | "not-configured" };
+  | { ok: false; reason: "wrong" | "rate-limited" | "not-configured" | "no-user" };
 
 /**
  * IP do chamador.
@@ -123,7 +123,10 @@ export async function login(passphrase: string): Promise<LoginResult> {
   const user = env.SINGLE_USER_ID
     ? await db.query.users.findFirst({ where: (t, { eq: e }) => e(t.id, env.SINGLE_USER_ID ?? "") })
     : await db.query.users.findFirst();
-  if (!user) return { ok: false, reason: "not-configured" };
+  // Distinto de "not-configured" de proposito: banco vazio e variavel faltando
+  // sao problemas diferentes, e a mensagem generica mandava procurar no lugar
+  // errado. So' chega aqui quem ja' acertou a passphrase, entao nao vaza nada.
+  if (!user) return { ok: false, reason: "no-user" };
 
   const store = await cookies();
   store.set(SESSION_COOKIE, createSessionToken(user.id, nowInstant()), sessionCookieOptions());

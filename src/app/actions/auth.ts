@@ -39,6 +39,11 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
         return {
           error: "Gate não configurado neste ambiente (APP_PASSWORD_HASH / AUTH_SECRET).",
         };
+      case "no-user":
+        return {
+          error:
+            "Passphrase correta, mas o banco não tem nenhum usuário. Rode `pnpm db:bootstrap`.",
+        };
       default:
         // Mensagem unica de proposito: distinguir "senha errada" de qualquer
         // outra coisa entregaria informacao de graca a quem esta' tentando.

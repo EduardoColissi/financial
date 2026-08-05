@@ -23,5 +23,5 @@ export default async function ContasPage({
   const ctx = await getContext();
   const data = await getBills(ctx, month, filter);
 
-  return <Bills data={data} month={month} filter={filter} />;
+  return <Bills data={data} month={month} filter={filter} hoje={ctx.today} />;
 }

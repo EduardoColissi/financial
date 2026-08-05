@@ -12,5 +12,5 @@ export default async function CartoesPage({ params }: { params: Promise<{ month:
   const ctx = await getContext();
   const data = await getCards(ctx, month);
 
-  return <Cards data={data} />;
+  return <Cards data={data} hoje={ctx.today} />;
 }

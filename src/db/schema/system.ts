@@ -88,22 +88,11 @@ export const appSettings = pgTable("app_settings", {
   hideValuesDefault: boolean("hide_values_default").notNull().default(false),
 });
 
-/**
- * Tentativas de login por IP.
- *
- * Em memoria nao funciona: cada instancia serverless tem a sua, e o atacante
- * simplesmente cai noutra. Precisa ser estado compartilhado.
+/*
+ * Aqui vivia `login_attempts`, o limite de 5 tentativas por IP do gate de
+ * passphrase. Saiu junto com a senha: no login pelo Google nao ha' segredo
+ * nosso para adivinhar — quem aguenta forca bruta contra a conta e' o Google.
  */
-export const loginAttempts = pgTable(
-  "login_attempts",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    ip: text("ip").notNull(),
-    attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull().defaultNow(),
-    succeeded: boolean("succeeded").notNull().default(false),
-  },
-  (t) => [index("login_attempts_ip_time_idx").on(t.ip, t.attemptedAt)]
-);
 
 /**
  * Trilha de auditoria das mutacoes de dinheiro.

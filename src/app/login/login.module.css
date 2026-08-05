@@ -92,56 +92,43 @@
   color: var(--fg-mut-2);
 }
 
-.form {
+/*
+ * Botao do Google.
+ *
+ * Fundo branco e texto escuro fogem da paleta do painel de proposito: as regras
+ * de marca do Google pedem o logotipo nas quatro cores sobre fundo neutro, e um
+ * botao de identidade reconhecivel e' o que o usuario espera clicar.
+ */
+.google {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.label {
-  font-weight: 600;
-  font-size: 9.5px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--fg-mut-2);
-}
-
-.input {
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   border: 1px solid var(--stroke-strong);
-  background: var(--surface-input);
   border-radius: var(--r-7);
-  padding: 12px;
-  outline: none;
-  font-family: var(--font-mono-stack);
-  font-size: 13px;
-  line-height: 1.2;
-  color: var(--fg);
-  width: 100%;
-}
-
-.input:focus {
-  border-color: var(--pos-soft);
-}
-
-.submit {
-  border: none;
-  border-radius: var(--r-7);
-  background: var(--grad-hero);
-  color: var(--on-accent);
+  background: #fff;
+  color: #1f1f1f;
   font-weight: 600;
   font-size: 12.5px;
   line-height: 1;
   padding: 12px;
   cursor: pointer;
+  text-decoration: none;
 }
 
-.submit:hover:not(:disabled) {
-  filter: brightness(1.08);
+.google:hover {
+  filter: brightness(0.96);
 }
 
-.submit:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.google:focus-visible {
+  outline: 2px solid var(--pos-soft);
+  outline-offset: 2px;
+}
+
+.googleMark {
+  width: 16px;
+  height: 16px;
+  flex: none;
 }
 
 .error {

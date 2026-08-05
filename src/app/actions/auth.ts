@@ -1,59 +1,16 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { z } from "zod";
-import { safeNext } from "@/lib/safe-next";
-import { login, logout } from "@/services/auth";
+import { logout } from "@/services/auth";
 
 /**
- * Entrada e saida do painel.
+ * Saida do painel.
  *
- * A senha so' existe dentro desta funcao: nao vai para log, nao vira query
- * string e nao volta no estado do formulario.
+ * A ENTRADA nao mora aqui: o login pelo Google e' uma navegacao GET que precisa
+ * gravar cookie antes de sair do site e receber a volta de outro dominio — coisa
+ * de Route Handler, em `app/api/auth/google/`. Server Action nao atende nenhum
+ * dos dois lados.
  */
-
-export interface LoginState {
-  error?: string;
-}
-
-const schema = z.object({
-  passphrase: z.string().min(1),
-  // Para onde voltar depois de entrar. Validado abaixo — ver `safeNext`.
-  de: z.string().optional(),
-});
-
-export async function loginAction(_prev: LoginState, formData: FormData): Promise<LoginState> {
-  const parsed = schema.safeParse({
-    passphrase: formData.get("passphrase"),
-    de: formData.get("de") ?? undefined,
-  });
-  if (!parsed.success) return { error: "Digite a passphrase." };
-
-  const result = await login(parsed.data.passphrase);
-
-  if (!result.ok) {
-    switch (result.reason) {
-      case "rate-limited":
-        return { error: "Tentativas demais. Espere 15 minutos." };
-      case "not-configured":
-        return {
-          error: "Gate não configurado neste ambiente (APP_PASSWORD_HASH / AUTH_SECRET).",
-        };
-      case "no-user":
-        return {
-          error:
-            "Passphrase correta, mas o banco não tem nenhum usuário. Rode `pnpm db:bootstrap`.",
-        };
-      default:
-        // Mensagem unica de proposito: distinguir "senha errada" de qualquer
-        // outra coisa entregaria informacao de graca a quem esta' tentando.
-        return { error: "Passphrase incorreta." };
-    }
-  }
-
-  redirect(safeNext(parsed.data.de));
-}
-
 export async function logoutAction(): Promise<void> {
   await logout();
   redirect("/login");

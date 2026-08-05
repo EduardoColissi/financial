@@ -1,10 +1,10 @@
 /**
  * Normaliza o ambiente cru antes da validacao.
  *
- * O dashboard da Vercel aceita variavel com valor vazio, e o runbook de deploy
- * manda declarar `APP_FAKE_TODAY` vazia em producao. Vazia nao vira `undefined`
- * no processo: vira `""` — e `""` nao passa em `min(1)`, `uuid()` nem no regex
- * de data. O build quebra em "Failed to collect page data", sem citar a
+ * O dashboard da Vercel aceita variavel com valor vazio, e o `.env.example` lista
+ * opcionais em branco — `SINGLE_USER_ID`, `CRON_SECRET`. Vazia nao vira
+ * `undefined` no processo: vira `""` — e `""` nao passa em `min(1)` nem em
+ * `uuid()`. O build quebra em "Failed to collect page data", sem citar a
  * variavel, num deploy onde ninguem mexeu em codigo.
  *
  * Tratar `""` como ausente e' o que qualquer um espera de uma variavel opcional

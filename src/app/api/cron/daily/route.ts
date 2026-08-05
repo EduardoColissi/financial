@@ -46,7 +46,7 @@ export async function GET(request: Request) {
   const processed: Array<{ userId: string; months: string[] }> = [];
 
   for (const row of rows) {
-    const today = todayInTimeZone(row.timezone, env.fakeToday);
+    const today = todayInTimeZone(row.timezone);
     const current = monthOf(today);
 
     // O mes corrente e o seguinte cobrem a virada de mes, que e' o unico

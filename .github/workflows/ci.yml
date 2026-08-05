@@ -31,14 +31,16 @@ jobs:
       # Valores de teste. Nao ha' segredo real neste arquivo — e nao pode haver:
       # o repositorio e' publico ou pode vir a ser.
       AUTH_SECRET: ci-secret-sem-valor-fora-do-ci-0123456789
-      # Hash de "passphrase publica do ci, sem valor nenhum". Nao e' segredo:
-      # protege um banco descartavel de dados fabricados. Existe porque o spec
-      # de senha errada precisa de um gate CONFIGURADO para poder recusa-la.
-      APP_PASSWORD_HASH: scrypt$16384$8$1$2nhmByc308xRmU8PV1B_Lw$jc11TQqiBsWzXWq8biuPmTN32mF-BvJ5iEbZ2stHoobCYLp7unO9WDkEKsKS9-5kOhMVlb-yK85Jt114kcIb_g
+      # Credenciais FALSAS de proposito. O E2E nao fala com o Google: os specs
+      # autenticados entram por cookie assinado, e os de recusa exercitam o
+      # callback com `state` invalido, que morre antes de qualquer rede. Existem
+      # porque a tela precisa de um gate CONFIGURADO para nao exibir apenas
+      # "nao configurado" e mascarar os outros motivos.
+      GOOGLE_CLIENT_ID: ci-client-id.apps.googleusercontent.com
+      GOOGLE_CLIENT_SECRET: ci-client-secret-sem-valor
+      GOOGLE_ALLOWED_EMAIL: ci@meucaixa.local
+      APP_URL: http://localhost:3006
       APP_TIMEZONE: America/Sao_Paulo
-      # Congela "hoje" na data que o design assume, senao os specs de
-      # vencimento mudariam de resultado todo dia.
-      APP_FAKE_TODAY: "2026-08-01"
       # `TZ=UTC` de proposito: e' o fuso da Vercel, e e' onde o bug de virada de
       # mes aparece. Rodar no fuso de Brasilia esconderia exatamente o defeito
       # que os testes de periodo existem para pegar.

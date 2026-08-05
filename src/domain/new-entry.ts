@@ -80,16 +80,27 @@ export function kindOf(type: EntryType): TransactionKind {
   }
 }
 
-/** O tipo pede categoria de qual natureza. */
-export function categoryKindOf(type: EntryType): "expense" | "income" | "investment" {
+/**
+ * O tipo pede categoria de qual natureza — ou setor, no caso do aporte.
+ *
+ * Aporte devolve `null` porque nao tem categoria: o destino dele e' um SETOR de
+ * investimento. Categoria de aporte existiu e era cadastro em dobro, sempre com
+ * os mesmos nomes do setor ao lado.
+ */
+export function categoryKindOf(type: EntryType): "expense" | "income" | null {
   switch (type) {
     case "despesa":
       return "expense";
     case "receita":
       return "income";
     case "aporte":
-      return "investment";
+      return null;
   }
+}
+
+/** Aporte escolhe setor; os outros escolhem categoria. */
+export function picksSector(type: EntryType): boolean {
+  return type === "aporte";
 }
 
 export interface EntryInput {

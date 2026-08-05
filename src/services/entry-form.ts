@@ -1,8 +1,9 @@
 import "server-only";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
-import { accounts, categories, creditCards } from "@/db/schema";
+import { accounts, categories, creditCards, investmentSectors } from "@/db/schema";
 import { firstDayOf, monthOf, type PlainDate, type RefMonth } from "@/domain/period";
+import { CATEGORY_KINDS } from "@/domain/registry";
 import type { AppContext } from "./context";
 
 /**
@@ -27,6 +28,8 @@ export interface EntryFormOptions {
   categories: CategoryOption[];
   accounts: OptionRow[];
   cards: OptionRow[];
+  /** Destinos de aporte. Ocupam o lugar da categoria quando o tipo e' aporte. */
+  sectors: OptionRow[];
   /** Data ja' preenchida no formulario. */
   defaultDate: PlainDate;
 }
@@ -47,7 +50,7 @@ export async function getEntryFormOptions(
   ctx: AppContext,
   month: RefMonth
 ): Promise<EntryFormOptions> {
-  const [cats, accs, cards] = await Promise.all([
+  const [cats, accs, cards, sectors] = await Promise.all([
     db
       .select({
         id: categories.id,
@@ -56,26 +59,37 @@ export async function getEntryFormOptions(
         kind: categories.kind,
       })
       .from(categories)
-      .where(and(eq(categories.userId, ctx.userId), isNull(categories.archivedAt)))
+      .where(and(eq(categories.userId, ctx.userId), inArray(categories.kind, [...CATEGORY_KINDS])))
       .orderBy(asc(categories.sortOrder), asc(categories.name)),
 
     db
       .select({ id: accounts.id, name: accounts.name, color: accounts.color })
       .from(accounts)
-      .where(and(eq(accounts.userId, ctx.userId), isNull(accounts.archivedAt)))
+      .where(eq(accounts.userId, ctx.userId))
       .orderBy(asc(accounts.sortOrder)),
 
     db
       .select({ id: creditCards.id, name: creditCards.name, color: creditCards.color })
       .from(creditCards)
-      .where(and(eq(creditCards.userId, ctx.userId), isNull(creditCards.archivedAt)))
+      .where(eq(creditCards.userId, ctx.userId))
       .orderBy(asc(creditCards.sortOrder)),
+
+    db
+      .select({
+        id: investmentSectors.id,
+        name: investmentSectors.name,
+        color: investmentSectors.color,
+      })
+      .from(investmentSectors)
+      .where(eq(investmentSectors.userId, ctx.userId))
+      .orderBy(asc(investmentSectors.sortOrder), asc(investmentSectors.name)),
   ]);
 
   return {
-    categories: cats,
+    categories: cats as CategoryOption[],
     accounts: accs,
     cards,
+    sectors,
     defaultDate: defaultEntryDate(ctx, month),
   };
 }

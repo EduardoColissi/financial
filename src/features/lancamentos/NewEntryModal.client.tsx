@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createEntryAction, type EntryFormState } from "@/app/actions/entries";
-import { type Cents, MoneyError, parseBRL, ZERO } from "@/domain/money";
 import {
   allowsInstallments,
   categoryKindOf,
@@ -14,11 +13,13 @@ import {
   effectHint,
   METHOD_LABELS,
   methodsFor,
+  picksSector,
   planEntry,
   previewOf,
 } from "@/domain/new-entry";
 import { type PlainDate, plainDate } from "@/domain/period";
 import { cx } from "@/lib/cx";
+import { centsFromDigits, maskBRL, onlyDigits } from "@/lib/money-mask";
 import type { EntryFormOptions } from "@/services/entry-form";
 import s from "./NewEntry.module.css";
 
@@ -35,18 +36,6 @@ import s from "./NewEntry.module.css";
  */
 
 const INITIAL: EntryFormState = { ok: true };
-
-/** Le' o valor digitado sem explodir enquanto o usuario ainda esta' digitando. */
-function readAmount(raw: string): Cents {
-  if (!raw.trim()) return ZERO;
-  try {
-    const value = parseBRL(raw);
-    return value > 0 ? value : ZERO;
-  } catch (err) {
-    if (err instanceof MoneyError) return ZERO;
-    throw err;
-  }
-}
 
 function readDate(raw: string, fallback: PlainDate): PlainDate {
   try {
@@ -80,6 +69,11 @@ function Dialog({ options }: { options: EntryFormOptions }) {
   const [categoryId, setCategoryId] = useState(
     () => options.categories.find((c) => c.kind === "expense")?.id ?? ""
   );
+  // Aporte escolhe SETOR no lugar da categoria: o destino de um aporte e'
+  // "reserva", "previdência", e isso ja' esta' cadastrado em Investimentos.
+  const [sectorId, setSectorId] = useState(() => options.sectors[0]?.id ?? "");
+  // Guarda os DIGITOS, nao o texto: o que aparece no campo e o que a previa
+  // calcula saem os dois de `amount`, entao nao ha' como divergirem.
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [occurredOn, setOccurredOn] = useState<string>(options.defaultDate);
@@ -99,7 +93,9 @@ function Dialog({ options }: { options: EntryFormOptions }) {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
-  const categories = options.categories.filter((c) => c.kind === categoryKindOf(type));
+  const porSetor = picksSector(type);
+  const categoryKind = categoryKindOf(type);
+  const categories = options.categories.filter((c) => c.kind === categoryKind);
   const methods = methodsFor(type);
   const canInstall = allowsInstallments(type, method);
   const onCredit = target.startsWith("card:");
@@ -123,10 +119,12 @@ function Dialog({ options }: { options: EntryFormOptions }) {
     syncTarget(nextMethod);
 
     const kind = categoryKindOf(next);
-    if (!options.categories.some((c) => c.id === categoryId && c.kind === kind)) {
+    if (kind && !options.categories.some((c) => c.id === categoryId && c.kind === kind)) {
       setCategoryId(options.categories.find((c) => c.kind === kind)?.id ?? "");
     }
     if (!allowsInstallments(next, nextMethod)) setInstallments(1);
+    // Aporte nao vira regra: a recorrente exige categoria, e ele nao tem uma.
+    if (picksSector(next)) setRepeats(false);
   }
 
   function selectMethod(next: EntryMethod) {
@@ -135,7 +133,7 @@ function Dialog({ options }: { options: EntryFormOptions }) {
     if (!allowsInstallments(type, next)) setInstallments(1);
   }
 
-  const amountCents = readAmount(amount);
+  const amountCents = centsFromDigits(amount);
   const plan =
     amountCents > 0
       ? planEntry({
@@ -150,7 +148,9 @@ function Dialog({ options }: { options: EntryFormOptions }) {
       : null;
 
   const labels = {
-    categoryName: categories.find((c) => c.id === categoryId)?.name ?? null,
+    categoryName: porSetor
+      ? (options.sectors.find((x) => x.id === sectorId)?.name ?? null)
+      : (categories.find((c) => c.id === categoryId)?.name ?? null),
     methodLabel: METHOD_LABELS[method],
     targetName:
       [...options.accounts, ...options.cards].find((o) => target.endsWith(o.id))?.name ?? null,
@@ -218,14 +218,14 @@ function Dialog({ options }: { options: EntryFormOptions }) {
                   name="amount"
                   className={s.amountInput}
                   placeholder="0,00"
-                  inputMode="decimal"
+                  inputMode="numeric"
                   autoComplete="off"
                   // Sem isto o <dialog> foca o "×": abrir o modal e ja' poder
                   // digitar o valor e' o caminho de 90% dos usos. Foco inicial
                   // de modal, nao de pagina — nao rouba foco de quem navega.
                   autoFocus
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  value={maskBRL(amount)}
+                  onChange={(e) => setAmount(onlyDigits(e.target.value))}
                 />
               </div>
             </div>
@@ -248,30 +248,36 @@ function Dialog({ options }: { options: EntryFormOptions }) {
           </div>
 
           <fieldset className={s.field}>
-            <legend className={s.label}>Categoria</legend>
+            <legend className={s.label}>{porSetor ? "Setor" : "Categoria"}</legend>
             <div className={s.chips}>
-              {categories.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={cx(s.chip, categoryId === c.id && s.chipActive)}
-                  aria-pressed={categoryId === c.id}
-                  onClick={() => setCategoryId(c.id)}
-                >
-                  <i
-                    aria-hidden="true"
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: 2,
-                      display: "block",
-                      background: c.color,
-                    }}
-                  />
-                  {c.name}
-                </button>
-              ))}
+              {(porSetor ? options.sectors : categories).map((c) => {
+                const escolhido = porSetor ? sectorId === c.id : categoryId === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={cx(s.chip, escolhido && s.chipActive)}
+                    aria-pressed={escolhido}
+                    onClick={() => (porSetor ? setSectorId(c.id) : setCategoryId(c.id))}
+                  >
+                    <i
+                      aria-hidden="true"
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: 2,
+                        display: "block",
+                        background: c.color,
+                      }}
+                    />
+                    {c.name}
+                  </button>
+                );
+              })}
             </div>
+            {porSetor && options.sectors.length === 0 ? (
+              <span className={s.hint}>Cadastre um setor em Investimentos antes de aportar.</span>
+            ) : null}
           </fieldset>
 
           <div className={s.pair}>
@@ -351,8 +357,9 @@ function Dialog({ options }: { options: EntryFormOptions }) {
               className={cx(s.toggle, repeats && s.toggleOn)}
               aria-pressed={repeats}
               // Parcelar ja' e' repetir por N meses; ligar os dois criaria duas
-              // regras para a mesma obrigacao.
-              disabled={installments > 1 && canInstall}
+              // regras para a mesma obrigacao. Aporte tambem nao repete: a regra
+              // recorrente exige categoria, e aporte tem setor.
+              disabled={(installments > 1 && canInstall) || porSetor}
               onClick={() => setRepeats((v) => !v)}
             >
               <span className={cx(s.track, repeats && s.trackOn)} aria-hidden="true">
@@ -372,7 +379,8 @@ function Dialog({ options }: { options: EntryFormOptions }) {
         <input type="hidden" name="type" value={type} />
         <input type="hidden" name="method" value={method} />
         <input type="hidden" name="target" value={target} />
-        <input type="hidden" name="categoryId" value={categoryId} />
+        <input type="hidden" name="categoryId" value={porSetor ? "" : categoryId} />
+        <input type="hidden" name="sectorId" value={porSetor ? sectorId : ""} />
         {repeats && installments === 1 ? <input type="hidden" name="repeats" value="on" /> : null}
 
         <div className={s.foot}>

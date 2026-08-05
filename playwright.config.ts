@@ -25,9 +25,11 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   // 5s nao chega: a suite roda em `next dev`, e a PRIMEIRA visita a cada rota
-  // paga a compilacao sob demanda. Rodar contra build de producao nao e' opcao —
-  // `APP_FAKE_TODAY` e' ignorada la', e sem congelar a data nao ha' o que
-  // afirmar sobre "vence em 7 dias".
+  // paga a compilacao sob demanda.
+  //
+  // A suite nao congela "hoje" — o app le' o relogio de verdade. O que da'
+  // determinismo e' o seed seguir o mesmo relogio: os specs derivam o mes de
+  // `MES_CORRENTE` (ver `e2e/fixtures.ts`), nunca de uma data cravada.
   expect: { timeout: 15_000 },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   globalSetup: "./e2e/global-setup.ts",

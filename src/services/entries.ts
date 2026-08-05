@@ -8,6 +8,7 @@ import {
   cardStatements,
   categories,
   creditCards,
+  investmentSectors,
   recurringRules,
   scheduledCharges,
   transactions,
@@ -48,7 +49,10 @@ export interface CreateEntryCommand {
   type: EntryType;
   amountCents: Cents;
   description: string;
-  categoryId: string;
+  /** Despesa e receita. Nulo no aporte, que usa `sectorId`. */
+  categoryId: string | null;
+  /** So' aporte. Ocupa o lugar da categoria. */
+  sectorId: string | null;
   method: EntryMethod;
   /** Exatamente um dos dois. Cartao so' com metodo `credit`. */
   accountId: string | null;
@@ -90,12 +94,34 @@ export async function createEntry(ctx: AppContext, cmd: CreateEntryCommand): Pro
   }
 
   // ── posse: nada entra sem pertencer a este usuario ─────────────────────────
-  const category = await db.query.categories.findFirst({
-    where: and(eq(categories.id, cmd.categoryId), eq(categories.userId, ctx.userId)),
-  });
-  if (!category) throw new EntryError("categoryId", "Categoria não encontrada.");
-  if (category.kind !== categoryKindOf(cmd.type)) {
-    throw new EntryError("categoryId", "Esta categoria não vale para este tipo de lançamento.");
+  // Aporte escolhe SETOR; despesa e receita escolhem categoria. Sao o mesmo
+  // campo na tela e colunas diferentes no banco, com CHECK exigindo um so'.
+  const kindEsperado = categoryKindOf(cmd.type);
+
+  if (kindEsperado === null) {
+    if (!cmd.sectorId) throw new EntryError("sectorId", "Escolha o setor do aporte.");
+    // Regra recorrente exige categoria (`recurring_rules.category_id` e' NOT
+    // NULL) e o aporte nao tem uma. Recusar aqui, com o motivo, e' melhor do que
+    // deixar o banco recusar depois com uma mensagem que ninguem le'.
+    if (cmd.repeats || cmd.installments > 1) {
+      throw new EntryError("repeats", "Aporte não repete nem parcela — lance mês a mês.");
+    }
+    const setor = await db.query.investmentSectors.findFirst({
+      where: and(
+        eq(investmentSectors.id, cmd.sectorId),
+        eq(investmentSectors.userId, ctx.userId)
+      ),
+    });
+    if (!setor) throw new EntryError("sectorId", "Setor não encontrado.");
+  } else {
+    if (!cmd.categoryId) throw new EntryError("categoryId", "Escolha uma categoria.");
+    const category = await db.query.categories.findFirst({
+      where: and(eq(categories.id, cmd.categoryId), eq(categories.userId, ctx.userId)),
+    });
+    if (!category) throw new EntryError("categoryId", "Categoria não encontrada.");
+    if (category.kind !== kindEsperado) {
+      throw new EntryError("categoryId", "Esta categoria não vale para este tipo de lançamento.");
+    }
   }
 
   const account = cmd.accountId
@@ -139,7 +165,7 @@ type Card = Awaited<ReturnType<typeof db.query.creditCards.findFirst>> | null;
  * fechamento do cartao mudar amanha, a compra de hoje nao pode migrar de fatura
  * retroativamente.
  */
-async function statementIdFor(ctx: AppContext, card: NonNullable<Card>, on: PlainDate) {
+export async function statementIdFor(ctx: AppContext, card: NonNullable<Card>, on: PlainDate) {
   const cycle = cycleFor(
     { closingDay: card.closingDay, dueDay: card.dueDay, bestDayOverride: card.bestDayOverride },
     on
@@ -175,6 +201,7 @@ async function createSingleTransaction(
         description: cmd.description,
         amountCents: cmd.amountCents,
         categoryId: cmd.categoryId,
+        sectorId: cmd.sectorId,
         method: cmd.method,
         accountId: cmd.accountId,
         cardId: cmd.cardId,
@@ -229,13 +256,18 @@ async function createRule(
   // e para uma data que nao esta' no futuro.
   const settleFirst = !card && isSameOrBefore(cmd.occurredOn, ctx.today);
 
+  // `recurring_rules.category_id` e' NOT NULL. `createEntry` ja' barra aporte
+  // antes de chegar aqui; esta linha e' o que faz o tipo dizer a mesma coisa.
+  const categoryId = cmd.categoryId;
+  if (!categoryId) throw new EntryError("categoryId", "Escolha uma categoria.");
+
   const [rule] = await db
     .insert(recurringRules)
     .values({
       userId: ctx.userId,
       kind: card ? "subscription" : "bill",
       name: cmd.description,
-      categoryId: cmd.categoryId,
+      categoryId,
       method: cmd.method,
       accountId: cmd.accountId,
       cardId: cmd.cardId,
@@ -271,7 +303,8 @@ async function createRule(
           competenceMonth: firstDayOf(plan.competenceMonth),
           description: cmd.description,
           amountCents: firstAmount,
-          categoryId: cmd.categoryId,
+          categoryId,
+          sectorId: null,
           method: cmd.method,
           accountId: cmd.accountId,
           cardId: null,

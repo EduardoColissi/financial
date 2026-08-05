@@ -40,18 +40,36 @@ export const recurringRules = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     kind: recurrenceKind("kind").notNull(),
     name: text("name").notNull(),
+    // `cascade` pelo mesmo motivo de `transactions`: apagar a conta, o cartao ou
+    // a categoria apaga a regra que dependia deles, e as cobrancas geradas caem
+    // junto pelo cascade de `scheduled_charges`.
     categoryId: uuid("category_id")
       .notNull()
-      .references(() => categories.id, { onDelete: "restrict" }),
+      .references(() => categories.id, { onDelete: "cascade" }),
     method: paymentMethod("method").notNull(),
-    accountId: uuid("account_id").references(() => accounts.id, { onDelete: "restrict" }),
-    cardId: uuid("card_id").references(() => creditCards.id, { onDelete: "restrict" }),
+    accountId: uuid("account_id").references(() => accounts.id, { onDelete: "cascade" }),
+    cardId: uuid("card_id").references(() => creditCards.id, { onDelete: "cascade" }),
     dueDay: smallint("due_day").notNull(),
     amountCents: integer("amount_cents"),
     /** Conta de consumo (luz, agua, gas): o valor muda todo mes. */
     isVariable: boolean("is_variable").notNull().default(false),
     estimatedCents: integer("estimated_cents"),
-    autopay: boolean("autopay").notNull().default(false),
+    /*
+     * Aqui vivia `autopay`.
+     *
+     * Ele so' pintava um rotulo: nenhuma conta era quitada sozinha, e continuava
+     * exigindo o mesmo clique em "Pagar". Duas palavras diferentes para o mesmo
+     * estado — e a que dizia "automático" era a mentirosa.
+     */
+    /**
+     * Entra no custo de vida.
+     *
+     * Aluguel, luz e plano de saude entram; Netflix nao. A distincao nao e'
+     * cosmetica: e' a base da reserva de emergencia, que precisa cobrir seis
+     * meses do que NAO da' para cortar. Somar streaming ali inflaria a meta e
+     * faria o dono guardar dinheiro para manter assinatura em crise.
+     */
+    essential: boolean("essential").notNull().default(false),
     firstRefMonth: date("first_ref_month").notNull(),
     /** Nulo = assinatura sem fim previsto. */
     installmentsTotal: smallint("installments_total"),

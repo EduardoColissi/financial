@@ -165,10 +165,21 @@
   background: rgba(255, 255, 255, 0.18);
 }
 
+/*
+ * A lista de secoes e' quem cede quando falta altura.
+ *
+ * A barra e' `height: 100vh` e o rodape usa `margin-top: auto`; sem isto, num
+ * monitor baixo o conteudo transborda para fora da viewport e o botao "Sair"
+ * fica inalcancavel — a barra e' `sticky`, entao rolar a pagina nao o revela.
+ * `min-height: 0` e' obrigatorio: sem ele um filho flex nao encolhe abaixo do
+ * proprio conteudo e o `overflow` nunca chega a valer.
+ */
 .nav {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .navGroup {
@@ -229,6 +240,8 @@
 
 .asideFoot {
   margin-top: auto;
+  /* Nunca encolhe: quem cede espaco e' `.nav`, logo acima. */
+  flex: none;
   display: flex;
   flex-direction: column;
   gap: 14px;

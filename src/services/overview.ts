@@ -15,7 +15,7 @@ import {
 } from "@/domain/period";
 import type { AppContext } from "./context";
 import { ensureMonthMaterialized } from "./materialize";
-import { getAccountBalances, getCategories, getTransactions } from "./queries";
+import { getCategories, getTransactions } from "./queries";
 
 /**
  * Agregados da visao geral.
@@ -39,7 +39,6 @@ export interface DueRow {
   name: string;
   dueDate: PlainDate;
   amountCents: Cents;
-  autopay: boolean;
   categoryName: string;
   fixed: boolean;
 }
@@ -53,8 +52,14 @@ export interface OverviewData {
   flow: MonthPoint[];
   due7: DueRow[];
   due7TotalCents: Cents;
-  investmentReturnCents: Cents;
-  dividendCents: Cents;
+  /**
+   * Quando o ultimo LANCAMENTO foi registrado — nao cadastro.
+   *
+   * Serve para saber se o painel esta' em dia. Cadastrar um cartao nao e' o
+   * mesmo que lancar um gasto: contar cadastro aqui daria a sensacao de estar
+   * em dia justamente em quem so' mexeu na configuracao.
+   */
+  lastEntryAt: Date | null;
 }
 
 export async function getOverview(ctx: AppContext, month: RefMonth): Promise<OverviewData> {
@@ -113,7 +118,6 @@ export async function getOverview(ctx: AppContext, month: RefMonth): Promise<Ove
       dueDate: scheduledCharges.dueDate,
       amountCents: scheduledCharges.amountCents,
       name: recurringRules.name,
-      autopay: recurringRules.autopay,
       isVariable: recurringRules.isVariable,
       categoryId: recurringRules.categoryId,
     })
@@ -135,28 +139,23 @@ export async function getOverview(ctx: AppContext, month: RefMonth): Promise<Ove
     name: r.name,
     dueDate: plainDate(r.dueDate),
     amountCents: cents(r.amountCents),
-    autopay: r.autopay,
     categoryName: catById.get(r.categoryId) ?? "—",
     fixed: !r.isVariable,
   }));
 
-  // ── carteira ──────────────────────────────────────────────────────────────
-  const inv = await db.execute<{ ret: string; div: string }>(sql`
-    select
-      (coalesce((select sum(market_value_cents) from investment_valuations
-                  where user_id = ${ctx.userId} and ref_month = ${ref}), 0)
-       - coalesce((select sum(market_value_cents) from investment_valuations
-                  where user_id = ${ctx.userId} and ref_month = ${firstDayOf(addMonths(month, -1))}), 0)
-       - coalesce((select sum(amount_cents) from investment_flows
-                  where user_id = ${ctx.userId} and ref_month = ${ref} and kind = 'contribution'), 0)
-       + coalesce((select sum(amount_cents) from investment_flows
-                  where user_id = ${ctx.userId} and ref_month = ${ref} and kind = 'withdrawal'), 0)
-      )::text as ret,
-      coalesce((select sum(amount_cents) from investment_flows
-                 where user_id = ${ctx.userId} and ref_month = ${ref} and kind = 'dividend'), 0)::text as div
+  // Ultimo lancamento: olha TODOS os meses, nao so' o aberto. Perguntar "quando
+  // lancei pela ultima vez" e receber "nunca" so' porque o mes visitado esta'
+  // vazio seria resposta errada.
+  const ultimo = await db.execute<{ at: string | null }>(sql`
+    select max(created_at)::text as at from transactions where user_id = ${ctx.userId}
   `);
+  const lastEntryAt = ultimo.rows[0]?.at ? new Date(ultimo.rows[0].at) : null;
 
+  // A carteira saiu junto com a aba de investimentos. `freeCents` continua
+  // sendo receita − despesa − aporte; a conta de "sobra" que o dono descreveu
+  // (em conta − pendente) entra na fase do motor.
   return {
+    lastEntryAt,
     incomeCents: cents(income),
     expenseCents: expense,
     contributionCents: cents(contribution),
@@ -165,9 +164,7 @@ export async function getOverview(ctx: AppContext, month: RefMonth): Promise<Ove
     flow,
     due7,
     due7TotalCents: cents(due7.reduce<number>((a, d) => a + d.amountCents, 0)),
-    investmentReturnCents: cents(Number(inv.rows[0]?.ret ?? 0)),
-    dividendCents: cents(Number(inv.rows[0]?.div ?? 0)),
   };
 }
 
-export { getAccountBalances, getCategories, refMonth };
+export { getCategories, refMonth };

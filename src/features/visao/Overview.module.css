@@ -265,3 +265,47 @@
   margin-top: 4px;
   border-top: 1px solid var(--stroke);
 }
+
+/* ── indicadores de saúde ─────────────────────────────────────────────────
+   Três medidas que não cabem nos KPIs: custo de vida, meta de reserva e há
+   quanto tempo o painel não recebe lançamento. */
+.health {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.healthItem {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-9);
+}
+
+/* Sem lançar há dias: o mês começa a mentir, e o cartão avisa. */
+.healthAlert {
+  border-color: var(--neg);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.healthValue {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.healthNote {
+  font-family: var(--font-mono-stack);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--fg-mut-2);
+}
+
+/* Aviso da virada de mês: uma coluna só, ocupando a largura toda. */
+.carryNotice {
+  grid-template-columns: 1fr;
+}

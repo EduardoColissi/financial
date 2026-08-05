@@ -31,7 +31,6 @@ export interface ChargeRow {
   day: number;
   amountCents: Cents;
   paid: boolean;
-  autopay: boolean;
   fixed: boolean;
   onCredit: boolean;
   categoryName: string;
@@ -52,8 +51,7 @@ export interface BillsResult {
   openCents: Cents;
   fixedCents: Cents;
   variableCents: Cents;
-  autoOpen: number;
-  manualOpen: number;
+  openCount: number;
   paidCount: number;
   /** Grade 6x7 do calendario, ja' com o offset real do dia da semana. */
   calendar: Array<{ key: string; day: number | null; today: boolean; charges: ChargeRow[] }>;
@@ -84,8 +82,7 @@ async function loadCharges(ctx: AppContext, month: RefMonth): Promise<ChargeRow[
     due_date: string;
     amount_cents: string;
     status: string;
-    autopay: boolean;
-    is_variable: boolean;
+      is_variable: boolean;
     card_id: string | null;
     sequence: number | null;
     total: number | null;
@@ -95,7 +92,7 @@ async function loadCharges(ctx: AppContext, month: RefMonth): Promise<ChargeRow[
     account_name: string | null;
   }>(sql`
     select sc.id, rr.name, to_char(sc.due_date,'YYYY-MM-DD') as due_date,
-           sc.amount_cents::text, sc.status, rr.autopay, rr.is_variable, rr.card_id,
+           sc.amount_cents::text, sc.status, rr.is_variable, rr.card_id,
            sc.sequence, rr.installments_total as total,
            cat.name as cat_name, cat.color as cat_color,
            cc.name as card_name, ac.name as account_name
@@ -122,7 +119,6 @@ async function loadCharges(ctx: AppContext, month: RefMonth): Promise<ChargeRow[
       day: partsOfDate(dueDate).day,
       amountCents: amount,
       paid,
-      autopay: r.autopay,
       fixed: !r.is_variable,
       onCredit,
       categoryName: r.cat_name,
@@ -183,8 +179,7 @@ export async function getBills(
     openCents: sum(all.filter((c) => !c.paid)),
     fixedCents: sum(all.filter((c) => c.fixed)),
     variableCents: sum(all.filter((c) => !c.fixed)),
-    autoOpen: all.filter((c) => c.autopay && !c.paid).length,
-    manualOpen: all.filter((c) => !c.autopay && !c.paid).length,
+    openCount: all.filter((c) => !c.paid).length,
     paidCount: paidList.length,
     calendar,
   };

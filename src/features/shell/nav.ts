@@ -12,7 +12,7 @@ export interface NavEntry {
   label: string;
   title: (month: RefMonth, monthLabel: string) => string;
   subtitle: string;
-  group: "month" | "wealth";
+  group: "month" | "wealth" | "setup";
 }
 
 export const NAV: NavEntry[] = [
@@ -58,12 +58,34 @@ export const NAV: NavEntry[] = [
     subtitle: "para onde o dinheiro foi — agregado por grupo e detalhado por categoria",
     group: "month",
   },
+  /**
+   * Modelo NOVO: setores com objetivo e data, alimentados pela sobra do mes.
+   * O anterior media desempenho de carteira — pergunta que o dono nao faz.
+   */
   {
     slug: "investimentos",
     label: "Investimentos",
     title: () => "Investimentos",
-    subtitle: "carteira, rendimento e alocação — rendimento é reinvestido, fora do fluxo de caixa",
+    subtitle: "para onde vai o que sobra — e quando você chega lá",
     group: "wealth",
+  },
+  /**
+   * Cadastro, nao relatorio: conta e cartao nao pertencem a mes nenhum.
+   *
+   * Fica sob o mesmo `/[month]/` mesmo assim, para reaproveitar o shell inteiro
+   * (sidebar, troca de mes, busca) sem um segundo layout. O mes no endereco e'
+   * inerte aqui — serve so' para voltar ao mes certo ao sair da aba.
+   *
+   * O rotulo diz "Contas e cartoes" e nao "Contas": a aba do mes ja' se chama
+   * "Contas a pagar", e duas coisas com o mesmo nome no mesmo menu e' erro de
+   * navegacao esperando acontecer.
+   */
+  {
+    slug: "ajustes",
+    label: "Cadastros",
+    title: () => "Cadastros",
+    subtitle: "contas, cartões e categorias — a base de tudo que se lança",
+    group: "setup",
   },
 ];
 

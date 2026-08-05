@@ -37,10 +37,6 @@ export function Shell({
     cartoes: { text: `${data.openStatementsCount}/${data.statementsCount}` },
     recorrentes: { text: String(data.upcomingChargesCount), tone: "warn" },
     categorias: { text: String(data.categoriesCount) },
-    investimentos: {
-      text: `${data.monthReturnCents >= 0 ? "+" : ""}${data.monthReturnPercent.toFixed(1).replace(".", ",")}%`,
-      tone: "pos",
-    },
   };
 
   return (
@@ -91,16 +87,30 @@ export function Shell({
                 badgeTone={badges[entry.slug]?.tone}
               />
             ))}
+
+            <span className={`${s.navGroup} ${s.navGroupSpaced}`}>Cadastros</span>
+            {NAV.filter((e) => e.group === "setup").map((entry) => (
+              <NavItem
+                key={entry.slug}
+                month={month}
+                slug={entry.slug}
+                label={entry.label}
+                badge={badges[entry.slug]?.text}
+                badgeTone={badges[entry.slug]?.tone}
+              />
+            ))}
           </nav>
 
           <div className={s.asideFoot}>
+            {/*
+              Era "Patrimônio total" (caixa + carteira). Virou "Em conta": a
+              carteira saiu junto com a aba de investimentos, e o que importa
+              aqui é o dinheiro disponível. O número ainda é só o saldo de
+              abertura — a soma dos lançamentos entra na fase do motor.
+            */}
             <div className={s.netWorth}>
-              <span className={s.netWorthLabel}>Patrimônio total</span>
-              <Money cents={data.netWorthCents} size="lg" compact />
-              <span className={s.netWorthNote}>
-                <Money cents={data.monthReturnCents} size="xs" kind="receita" tone="pos" /> no mês ·
-                reinvestido
-              </span>
+              <span className={s.netWorthLabel}>Em conta</span>
+              <Money cents={data.cashCents} size="lg" compact />
             </div>
 
             <NewEntryButton className={s.newButton}>

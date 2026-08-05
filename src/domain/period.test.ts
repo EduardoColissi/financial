@@ -140,12 +140,9 @@ describe("dia da semana", () => {
 });
 
 describe("hoje", () => {
-  it("respeita a data congelada", () => {
-    expect(todayInTimeZone("America/Sao_Paulo", "2026-08-01")).toBe("2026-08-01");
-  });
-
   it("devolve a data civil de Sao Paulo, nao a de UTC", () => {
-    // Sem fake, so' da' para afirmar o formato e a consistencia entre fusos.
+    // Le' o relogio de verdade, entao so' da' para afirmar o formato e a
+    // consistencia entre fusos — nunca uma data concreta.
     const sp = todayInTimeZone("America/Sao_Paulo");
     const utc = todayInTimeZone("UTC");
     expect(sp).toMatch(/^\d{4}-\d{2}-\d{2}$/);

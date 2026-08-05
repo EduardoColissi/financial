@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
 import { parseMonthParam } from "@/domain/period";
-import { Investments } from "@/features/investimentos/Investments";
+import { Sectors } from "@/features/investimentos/Sectors.client";
 import { getContext } from "@/services/context";
-import { getInvestments } from "@/services/investments";
-import { getCategories } from "@/services/queries";
+import { getSectors } from "@/services/sectors";
 
 export default async function InvestimentosPage({
   params,
@@ -15,9 +14,7 @@ export default async function InvestimentosPage({
   if (!month) notFound();
 
   const ctx = await getContext();
-  // A despesa do mes entra so' para calcular quantos meses a reserva cobre.
-  const categories = await getCategories(ctx, month);
-  const data = await getInvestments(ctx, month, categories.totalCents);
+  const data = await getSectors(ctx, month);
 
-  return <Investments data={data} />;
+  return <Sectors data={data} />;
 }

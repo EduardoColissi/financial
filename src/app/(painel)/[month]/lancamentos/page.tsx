@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { parseMonthParam } from "@/domain/period";
 import { TransactionsTable } from "@/features/lancamentos/TransactionsTable";
 import { getContext } from "@/services/context";
+import { getEntryFormOptions } from "@/services/entry-form";
 import { getTransactions } from "@/services/queries";
 
 export default async function LancamentosPage({
@@ -20,9 +21,21 @@ export default async function LancamentosPage({
   const kind = one(query.tipo) ?? "todos";
   const method = one(query.meio) ?? "todos";
   const q = one(query.q) ?? "";
+  const editar = one(query.editar);
 
   const ctx = await getContext();
-  const data = await getTransactions(ctx, month, { q, kind, method });
+  const [data, formOptions] = await Promise.all([
+    getTransactions(ctx, month, { q, kind, method }),
+    getEntryFormOptions(ctx, month),
+  ]);
 
-  return <TransactionsTable data={data} kindFilter={kind} methodFilter={method} />;
+  return (
+    <TransactionsTable
+      data={data}
+      kindFilter={kind}
+      methodFilter={method}
+      editando={editar}
+      formOptions={formOptions}
+    />
+  );
 }

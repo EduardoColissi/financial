@@ -3,7 +3,10 @@ import { Card, CategoryDot, EmptyState, SectionHeader } from "@/components/ui/pr
 import { StatusPill } from "@/components/ui/StatusPill";
 import { type FlowKind, subCents } from "@/domain/money";
 import { shortDate } from "@/domain/period";
+import type { EntryFormOptions } from "@/services/entry-form";
 import { methodLabel, type TransactionsResult } from "@/services/queries";
+import { EditEntryModal } from "./EditEntryModal.client";
+import { EntryActions } from "./EntryActions.client";
 import { FilterChips } from "./filters.client";
 import s from "./Transactions.module.css";
 
@@ -33,11 +36,20 @@ export function TransactionsTable({
   data,
   kindFilter,
   methodFilter,
+  editando,
+  formOptions,
 }: {
   data: TransactionsResult;
   kindFilter: string;
   methodFilter: string;
+  /** Id vindo de `?editar=` — a linha que abre no modal. */
+  editando?: string;
+  formOptions: EntryFormOptions;
 }) {
+  // A linha vem da lista que ja' esta' em maos: abrir o modal nao deve custar
+  // outra ida ao banco.
+  const emEdicao = editando ? data.rows.find((t) => t.id === editando) : undefined;
+
   return (
     <Card>
       <SectionHeader
@@ -104,6 +116,9 @@ export function TransactionsTable({
                 <th scope="col" className={`${s.th} ${s.thRight}`} style={{ width: 118 }}>
                   Valor
                 </th>
+                <th scope="col" className={`${s.th} ${s.thRight}`} style={{ width: 132 }}>
+                  <span className={s.srOnly}>Ações</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -131,6 +146,9 @@ export function TransactionsTable({
                       tone={t.kind === "income" ? "pos" : "default"}
                     />
                   </td>
+                  <td className={`${s.td} ${s.tdRight}`}>
+                    <EntryActions id={t.id} description={t.description} link={t.link} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -151,6 +169,12 @@ export function TransactionsTable({
           </div>
         </>
       )}
+
+      {emEdicao ? (
+        // `key` no id: trocar de linha sem remontar deixaria os campos da
+        // anterior preenchidos, porque o estado inicial so' e' lido uma vez.
+        <EditEntryModal key={emEdicao.id} row={emEdicao} options={formOptions} />
+      ) : null}
     </Card>
   );
 }

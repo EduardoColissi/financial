@@ -133,3 +133,78 @@
   font-size: 10.5px;
   color: var(--fg-mut);
 }
+
+/* ── editar e excluir ──────────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.action {
+  border: none;
+  background: transparent;
+  border-radius: var(--r-4);
+  padding: 5px 8px;
+  font-size: 10.5px;
+  line-height: 1;
+  color: var(--fg-mut);
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.action:hover {
+  background: var(--surface-4);
+  color: var(--fg);
+}
+
+/* Só aparece no hover da linha: oito linhas com dois botões cada viram ruído
+   visual, e a coluna de valor é o que o olho procura. O foco de teclado também
+   revela — senão a navegação por Tab passaria por botões invisíveis. */
+.actions .action {
+  opacity: 0;
+}
+
+.row:hover .actions .action,
+.actions .action:focus-visible {
+  opacity: 1;
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: var(--r-5);
+  border: 1px solid var(--neg);
+  background: rgba(248, 113, 113, 0.08);
+  min-width: 210px;
+}
+
+.confirmText {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--fg-mut);
+  text-align: left;
+}
+
+.danger {
+  border: none;
+  border-radius: var(--r-4);
+  padding: 5px 9px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1;
+  background: var(--neg);
+  color: #1b0e0e;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.danger:hover {
+  filter: brightness(1.08);
+}

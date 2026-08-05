@@ -66,10 +66,7 @@ async function buildStatements(
   target: MaterializeTarget,
   month: RefMonth
 ): Promise<number> {
-  const cards = await db
-    .select()
-    .from(creditCards)
-    .where(and(eq(creditCards.userId, target.userId), isNull(creditCards.archivedAt)));
+  const cards = await db.select().from(creditCards).where(eq(creditCards.userId, target.userId));
 
   if (cards.length === 0) return 0;
 

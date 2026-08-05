@@ -2,8 +2,9 @@ import "server-only";
 import { sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "@/db/client";
-import { type Cents, cents } from "@/domain/money";
-import { addMonths, firstDayOf, type RefMonth } from "@/domain/period";
+import type { Cents } from "@/domain/money";
+import { firstDayOf, type RefMonth } from "@/domain/period";
+import { getCashView } from "./cash";
 import type { AppContext } from "./context";
 import { ensureMonthMaterialized } from "./materialize";
 
@@ -20,16 +21,14 @@ export interface ShellData {
   openStatementsCount: number;
   statementsCount: number;
   categoriesCount: number;
-  netWorthCents: Cents;
-  monthReturnCents: Cents;
-  monthReturnPercent: number;
+  /** Dinheiro disponivel. Hoje = saldo de abertura; vira derivado na fase 2. */
+  cashCents: Cents;
 }
 
 export const getShellData = cache(async (ctx: AppContext, month: RefMonth): Promise<ShellData> => {
   await ensureMonthMaterialized(ctx, month);
 
   const ref = firstDayOf(month);
-  const prevRef = firstDayOf(addMonths(month, -1));
 
   const { rows } = await db.execute<Record<string, string>>(sql`
     select
@@ -55,31 +54,17 @@ export const getShellData = cache(async (ctx: AppContext, month: RefMonth): Prom
         where user_id = ${ctx.userId} and ref_month = ${ref})::text as statements,
 
       (select count(*) from categories
-        where user_id = ${ctx.userId} and kind = 'expense' and archived_at is null)::text as categories,
-
-      -- Patrimonio = caixa + carteira.
-      (select coalesce(sum(opening_balance_cents), 0) from accounts
-        where user_id = ${ctx.userId} and archived_at is null and include_in_cash_total)::text as cash,
-      (select coalesce(sum(market_value_cents), 0) from investment_valuations
-        where user_id = ${ctx.userId} and ref_month = ${ref})::text as portfolio,
-      (select coalesce(sum(market_value_cents), 0) from investment_valuations
-        where user_id = ${ctx.userId} and ref_month = ${prevRef})::text as portfolio_prev,
-
-      -- Aportes do mes: precisam sair do rendimento, senao aporte vira "ganho".
-      (select coalesce(sum(amount_cents), 0) from investment_flows
-        where user_id = ${ctx.userId} and ref_month = ${ref} and kind = 'contribution')::text as contributions,
-      (select coalesce(sum(amount_cents), 0) from investment_flows
-        where user_id = ${ctx.userId} and ref_month = ${ref} and kind = 'withdrawal')::text as withdrawals
+        where user_id = ${ctx.userId} and kind = 'expense')::text as categories
   `);
 
   const r = rows[0] ?? {};
   const n = (key: string) => Number(r[key] ?? 0);
 
-  const portfolio = n("portfolio");
-  const portfolioPrev = n("portfolio_prev");
-  // Regra C1: variacao de valor menos o que entrou, mais o que saiu.
-  const monthReturn =
-    portfolioPrev > 0 ? portfolio - portfolioPrev - n("contributions") + n("withdrawals") : 0;
+  // O MESMO numero do cartao "Em conta" da visao geral. Nao ha' segunda conta
+  // aqui de proposito: enquanto a barra somava so' o saldo de abertura, a mesma
+  // tela mostrava dois valores com o mesmo rotulo. `getCashView` e' `cache()`,
+  // entao layout e pagina compartilham a leitura no mesmo request.
+  const caixa = await getCashView(ctx, month);
 
   return {
     transactionsCount: n("tx_count"),
@@ -88,8 +73,6 @@ export const getShellData = cache(async (ctx: AppContext, month: RefMonth): Prom
     openStatementsCount: n("open_statements"),
     statementsCount: n("statements"),
     categoriesCount: n("categories"),
-    netWorthCents: cents(n("cash") + portfolio),
-    monthReturnCents: cents(monthReturn),
-    monthReturnPercent: portfolio > 0 ? (monthReturn / portfolio) * 100 : 0,
+    cashCents: caixa.cashCents,
   };
 });

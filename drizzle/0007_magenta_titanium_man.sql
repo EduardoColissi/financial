@@ -1,0 +1,1 @@
+ALTER TABLE "recurring_rules" ADD COLUMN "essential" boolean DEFAULT false NOT NULL;

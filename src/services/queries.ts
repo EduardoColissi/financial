@@ -1,7 +1,8 @@
 import "server-only";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { accounts, categories, categoryGroups, creditCards, transactions } from "@/db/schema";
+import { accounts, categories, creditCards, investmentSectors, transactions } from "@/db/schema";
+import type { EntryLink } from "@/domain/entry-edit";
 import { type Cents, cents } from "@/domain/money";
 import { firstDayOf, type PlainDate, plainDate, type RefMonth } from "@/domain/period";
 import { statusTone, type Tone, type TransactionStatus, txStatus } from "@/domain/status";
@@ -32,6 +33,14 @@ export interface TransactionRow {
   status: TransactionStatus;
   tone: Tone;
   onCredit: boolean;
+  /** Ids crus, para o formulario de edicao abrir ja' preenchido. */
+  categoryId: string | null;
+  sectorId: string | null;
+  accountId: string | null;
+  cardId: string | null;
+  /** O que depende desta linha — manda no que da' para editar e no que a
+   * exclusao desfaz. Ver `domain/entry-edit`. */
+  link: EntryLink;
 }
 
 export interface TransactionsFilter {
@@ -62,6 +71,29 @@ export function methodLabel(method: string): string {
   return METHOD_LABEL[method] ?? method;
 }
 
+/**
+ * Traduz as subconsultas de vinculo no `EntryLink` do dominio.
+ *
+ * A ordem e' de exclusividade: uma linha que paga uma fatura nunca e' tambem a
+ * quitacao de uma cobranca avulsa. Aporte nao entra — ele deixou de ser vinculo
+ * quando o setor virou coluna do proprio lancamento, e hoje e' linha solta.
+ */
+function linkOf(r: {
+  chargeName: string | null;
+  statementCard: string | null;
+  statementCharges: number;
+}): EntryLink {
+  if (r.chargeName) return { kind: "charge", label: r.chargeName };
+  if (r.statementCard) {
+    return {
+      kind: "statement",
+      label: r.statementCard,
+      charges: Number(r.statementCharges ?? 0),
+    };
+  }
+  return { kind: "none" };
+}
+
 export async function getTransactions(
   ctx: AppContext,
   month: RefMonth,
@@ -82,20 +114,46 @@ export async function getTransactions(
       installmentSeq: transactions.installmentSeq,
       installmentTotal: transactions.installmentTotal,
       cardId: transactions.cardId,
-      categoryName: categories.name,
-      categoryColor: categories.color,
+      categoryId: transactions.categoryId,
+      sectorId: transactions.sectorId,
+      accountId: transactions.accountId,
+      // Aporte nao tem categoria: o setor ocupa a mesma coluna da tabela, com o
+      // mesmo pontinho colorido. Sao dois cadastros, uma coluna so' na tela.
+      categoryName: sql<string | null>`coalesce(${categories.name}, ${investmentSectors.name})`,
+      categoryColor: sql<string | null>`coalesce(${categories.color}, ${investmentSectors.color})`,
       accountName: accounts.name,
       cardName: creditCards.name,
+
+      /*
+       * Os vinculos vem como subconsulta correlacionada, nao como `leftJoin`.
+       * Um join com `scheduled_charges` duplicaria a LINHA caso houvesse duas
+       * cobrancas apontando para o mesmo lancamento — e um lancamento repetido
+       * na lista seria lido como dinheiro gasto duas vezes.
+       */
+      chargeName: sql<string | null>`(
+        select r.name from scheduled_charges sc
+          join recurring_rules r on r.id = sc.rule_id
+         where sc.transaction_id = ${transactions.id} limit 1)`,
+      statementCard: sql<string | null>`(
+        select c.name from card_statements st
+          join credit_cards c on c.id = st.card_id
+         where st.payment_transaction_id = ${transactions.id} limit 1)`,
+      statementCharges: sql<number>`(
+        select count(*)::int from scheduled_charges sc
+         where sc.statement_id = (select st.id from card_statements st
+                                   where st.payment_transaction_id = ${transactions.id} limit 1))`,
     })
     .from(transactions)
     .leftJoin(categories, eq(categories.id, transactions.categoryId))
     .leftJoin(accounts, eq(accounts.id, transactions.accountId))
     .leftJoin(creditCards, eq(creditCards.id, transactions.cardId))
+    .leftJoin(investmentSectors, eq(investmentSectors.id, transactions.sectorId))
     .where(and(eq(transactions.userId, ctx.userId), eq(transactions.competenceMonth, ref)))
     .orderBy(desc(transactions.occurredOn), desc(transactions.createdAt));
 
   const all: TransactionRow[] = rows.map((r) => {
     const onCredit = r.cardId != null;
+    const link = linkOf(r);
     const status = txStatus({
       kind: r.kind,
       onCredit,
@@ -117,6 +175,11 @@ export async function getTransactions(
       status,
       tone: statusTone(status),
       onCredit,
+      categoryId: r.categoryId,
+      sectorId: r.sectorId,
+      accountId: r.accountId,
+      cardId: r.cardId,
+      link,
     };
   });
 
@@ -157,7 +220,6 @@ export interface CategoryStat {
   id: string;
   name: string;
   color: string;
-  groupName: string;
   spentCents: Cents;
   budgetCents: Cents | null;
   count: number;
@@ -166,21 +228,23 @@ export interface CategoryStat {
   dominantMethod: string | null;
 }
 
-export interface GroupStat {
-  id: string;
-  name: string;
-  color: string;
-  spentCents: Cents;
-  categories: CategoryStat[];
-}
-
 export interface CategoriesResult {
-  groups: GroupStat[];
   categories: CategoryStat[];
   totalCents: Cents;
   transactionCount: number;
 }
 
+/**
+ * Gasto do mes por categoria.
+ *
+ * Sem nivel de grupo: o agrupamento que interessa e' o proprio grafico, que
+ * separa as despesas por categoria. Um nivel intermediario era cadastro a mais
+ * para o mesmo resultado.
+ *
+ * `leftJoin` e nao `innerJoin`: categoria sem lancamento no mes precisa
+ * aparecer com zero, senao ela some da tela justamente no mes em que o dono
+ * quer conferir que nao gastou nada nela.
+ */
 export async function getCategories(ctx: AppContext, month: RefMonth): Promise<CategoriesResult> {
   await ensureMonthMaterialized(ctx, month);
   const ref = firstDayOf(month);
@@ -191,16 +255,11 @@ export async function getCategories(ctx: AppContext, month: RefMonth): Promise<C
       name: categories.name,
       color: categories.color,
       budgetCents: categories.monthlyBudgetCents,
-      groupId: categoryGroups.id,
-      groupName: categoryGroups.name,
-      groupColor: categoryGroups.color,
-      groupOrder: categoryGroups.sortOrder,
       spent: sql<string>`coalesce(sum(case when ${transactions.isRefund} then -${transactions.amountCents} else ${transactions.amountCents} end), 0)::text`,
       count: sql<string>`count(${transactions.id})::text`,
       method: sql<string | null>`mode() within group (order by ${transactions.method})`,
     })
     .from(categories)
-    .leftJoin(categoryGroups, eq(categoryGroups.id, categories.groupId))
     .leftJoin(
       transactions,
       and(
@@ -215,12 +274,9 @@ export async function getCategories(ctx: AppContext, month: RefMonth): Promise<C
       categories.name,
       categories.color,
       categories.monthlyBudgetCents,
-      categoryGroups.id,
-      categoryGroups.name,
-      categoryGroups.color,
-      categoryGroups.sortOrder
+      categories.sortOrder
     )
-    .orderBy(asc(categoryGroups.sortOrder), asc(categories.sortOrder));
+    .orderBy(asc(categories.sortOrder));
 
   const total = rows.reduce<number>((a, r) => a + Number(r.spent), 0);
   let txCount = 0;
@@ -233,7 +289,6 @@ export async function getCategories(ctx: AppContext, month: RefMonth): Promise<C
       id: r.id,
       name: r.name,
       color: r.color,
-      groupName: r.groupName ?? "—",
       spentCents: cents(spent),
       budgetCents: r.budgetCents != null ? cents(r.budgetCents) : null,
       count,
@@ -243,72 +298,9 @@ export async function getCategories(ctx: AppContext, month: RefMonth): Promise<C
     };
   });
 
-  const groupMap = new Map<string, GroupStat>();
-  for (const r of rows) {
-    if (!r.groupId) continue;
-    if (!groupMap.has(r.groupId)) {
-      groupMap.set(r.groupId, {
-        id: r.groupId,
-        name: r.groupName ?? "—",
-        color: r.groupColor ?? "var(--fg-mut)",
-        spentCents: cents(0),
-        categories: [],
-      });
-    }
-    const group = groupMap.get(r.groupId);
-    const stat = stats.find((s) => s.id === r.id);
-    if (group && stat) {
-      group.categories.push(stat);
-      group.spentCents = cents(group.spentCents + stat.spentCents);
-    }
-  }
-
-  for (const group of groupMap.values()) {
-    group.categories.sort((a, b) => b.spentCents - a.spentCents);
-  }
-
   return {
-    groups: [...groupMap.values()],
     categories: [...stats].sort((a, b) => b.spentCents - a.spentCents),
     totalCents: cents(total),
     transactionCount: txCount,
-  };
-}
-
-// ── saldos em conta ──────────────────────────────────────────────────────────
-
-export interface AccountBalance {
-  id: string;
-  name: string;
-  type: string;
-  tag: string | null;
-  initials: string;
-  color: string;
-  balanceCents: Cents;
-}
-
-export async function getAccountBalances(
-  ctx: AppContext
-): Promise<{ accounts: AccountBalance[]; totalCents: Cents }> {
-  const rows = await db
-    .select()
-    .from(accounts)
-    .where(eq(accounts.userId, ctx.userId))
-    .orderBy(asc(accounts.sortOrder));
-
-  const visible = rows.filter((a) => a.includeInCashTotal && a.archivedAt == null);
-  const list: AccountBalance[] = visible.map((a) => ({
-    id: a.id,
-    name: a.name,
-    type: a.type,
-    tag: a.tag,
-    initials: a.initials,
-    color: a.color,
-    balanceCents: cents(a.openingBalanceCents),
-  }));
-
-  return {
-    accounts: list,
-    totalCents: cents(list.reduce<number>((acc, a) => acc + a.balanceCents, 0)),
   };
 }

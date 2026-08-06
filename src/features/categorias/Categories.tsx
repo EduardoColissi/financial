@@ -48,48 +48,42 @@ export function Categories({ data, incomeCents }: { data: CategoriesResult; inco
             sub={`${data.transactionCount} lançamentos classificados em ${data.categories.length} categorias`}
             right={<MicroLabel>{fmt(data.totalCents, incomeCents)} da renda</MicroLabel>}
           />
+          {/*
+            Lista plana, da maior para a menor. A barra compara com o TOTAL de
+            saídas do mês — antes comparava com o total do grupo, que fazia a
+            maior categoria de um grupo pequeno parecer tão pesada quanto a de
+            um grupo grande.
+          */}
           <div>
-            {data.groups.map((g) => (
-              <div key={g.id} className={s.group}>
-                <div className={s.groupHead}>
-                  <span className={s.groupTitle}>
-                    <CategoryDot color={g.color} />
-                    <span className={s.groupName}>{g.name}</span>
-                    <span className={s.groupMeta}>
-                      {g.categories.length} categorias · {fmt(g.spentCents, data.totalCents)} das
-                      saídas
+            {data.categories.length === 0 ? (
+              <EmptyState>Nenhuma despesa classificada neste mês.</EmptyState>
+            ) : (
+              data.categories.map((c) => (
+                <div key={c.id}>
+                  <div className={s.catRow}>
+                    <span className={s.catName}>
+                      <CategoryDot color={c.color} size={8} />
+                      <span className={s.catLabel}>{c.name}</span>
                     </span>
-                  </span>
-                  <Money cents={g.spentCents} size="md" />
-                </div>
-
-                {g.categories.map((c) => (
-                  <div key={c.id}>
-                    <div className={s.catRow}>
-                      <span className={s.catName}>
-                        <CategoryDot color={c.color} size={8} />
-                        <span className={s.catLabel}>{c.name}</span>
-                      </span>
-                      <span className={s.mono}>
-                        {c.count} lanç. · {c.dominantMethod ?? "—"}
-                      </span>
-                      <span className={s.mono}>média {brl0(c.avgCents)}</span>
-                      <span style={{ textAlign: "right" }}>
-                        <Money cents={c.spentCents} size="sm" />
-                      </span>
-                    </div>
-                    <div className={s.bar}>
-                      <ProgressBar
-                        value={c.spentCents}
-                        total={g.spentCents}
-                        color={c.color}
-                        height={5}
-                      />
-                    </div>
+                    <span className={s.mono}>
+                      {c.count} lanç. · {c.dominantMethod ?? "—"}
+                    </span>
+                    <span className={s.mono}>média {brl0(c.avgCents)}</span>
+                    <span style={{ textAlign: "right" }}>
+                      <Money cents={c.spentCents} size="sm" />
+                    </span>
                   </div>
-                ))}
-              </div>
-            ))}
+                  <div className={s.bar}>
+                    <ProgressBar
+                      value={c.spentCents}
+                      total={data.totalCents}
+                      color={c.color}
+                      height={5}
+                    />
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </Card>
 

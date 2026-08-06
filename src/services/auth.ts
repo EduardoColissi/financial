@@ -1,20 +1,12 @@
 import "server-only";
-import { and, eq, gte, sql } from "drizzle-orm";
-import { cookies, headers } from "next/headers";
+import { eq } from "drizzle-orm";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { db } from "@/db/client";
-import { loginAttempts } from "@/db/schema";
-import { verifyPassword } from "@/domain/password";
+import { users } from "@/db/schema";
 import { nowInstant } from "@/domain/period";
-import { env } from "@/lib/env";
-import {
-  createSessionToken,
-  SESSION_COOKIE,
-  type Session,
-  sessionCookieOptions,
-  verifySessionToken,
-} from "@/lib/session";
+import { SESSION_COOKIE, type Session, verifySessionToken } from "@/lib/session";
 
 /**
  * Camada 2 do gate — a fronteira de autorizacao de verdade.
@@ -23,6 +15,10 @@ import {
  * dentro de cada leitura, action e route handler. Nao e' redundancia
  * decorativa: Server Functions sao POST na rota onde foram usadas, entao mover
  * um componente de lugar pode tira-las do matcher do proxy sem nenhum aviso.
+ *
+ * Quem CRIA sessao e' `google-auth.ts`. Este modulo so' le' e derruba — e' o que
+ * mantem a troca do metodo de login (passphrase ontem, Google hoje) sem efeito
+ * sobre as sete abas do painel.
  */
 
 export class UnauthorizedError extends Error {
@@ -63,75 +59,25 @@ export function unauthorizedJson(): Response {
   return Response.json({ error: "unauthorized" }, { status: 401 });
 }
 
-// ── entrada ──────────────────────────────────────────────────────────────────
-
-/** 5 tentativas por IP a cada 15 minutos. */
-const WINDOW_MINUTES = 15;
-const MAX_ATTEMPTS = 5;
-
-export type LoginResult =
-  | { ok: true }
-  | { ok: false; reason: "wrong" | "rate-limited" | "not-configured" | "no-user" };
-
 /**
- * IP do chamador.
+ * Sessao cujo usuario AINDA EXISTE. So' a tela de login precisa disto.
  *
- * Atras da Vercel o socket e' sempre o do proxy; o IP real vem no
- * `x-forwarded-for`, e o PRIMEIRO da lista e' o cliente.
- */
-async function callerIp(): Promise<string> {
-  const h = await headers();
-  const forwarded = h.get("x-forwarded-for");
-  const first = forwarded?.split(",")[0]?.trim();
-  return first || h.get("x-real-ip") || "desconhecido";
-}
-
-/**
- * Limite de tentativas em TABELA, nao em memoria.
+ * `readSession()` confere assinatura e prazo, e nada mais — de proposito, para
+ * nao pagar ida ao banco em toda requisicao. Mas cookie bem assinado apontando
+ * para usuario apagado (banco recriado pelo seed, por exemplo) criava um laco:
+ * `getContext()` nao achava a linha e mandava para `/login`; `/login` via
+ * assinatura valida e mandava de volta; o navegador ficava girando entre os
+ * dois ate' desistir.
  *
- * Em serverless cada instancia tem a propria memoria: um contador local seria
- * zerado a cada instancia fria, e quem esta' tentando forca bruta simplesmente
- * cairia noutra. O estado precisa ser compartilhado, e o banco ja' e'.
+ * Conferir a existencia AQUI, e so' aqui, quebra o laco no unico ponto que
+ * decide "ja' esta' logado?" — sem custo nas outras rotas.
  */
-async function tooManyAttempts(ip: string): Promise<boolean> {
-  const since = new Date(nowInstant().getTime() - WINDOW_MINUTES * 60_000);
-  const [row] = await db
-    .select({ n: sql<string>`count(*)::text` })
-    .from(loginAttempts)
-    .where(
-      and(
-        eq(loginAttempts.ip, ip),
-        eq(loginAttempts.succeeded, false),
-        gte(loginAttempts.attemptedAt, since)
-      )
-    );
-  return Number(row?.n ?? 0) >= MAX_ATTEMPTS;
-}
-
-export async function login(passphrase: string): Promise<LoginResult> {
-  if (!env.APP_PASSWORD_HASH || !env.AUTH_SECRET) {
-    return { ok: false, reason: "not-configured" };
-  }
-
-  const ip = await callerIp();
-  if (await tooManyAttempts(ip)) return { ok: false, reason: "rate-limited" };
-
-  const ok = verifyPassword(passphrase, env.APP_PASSWORD_HASH);
-  await db.insert(loginAttempts).values({ ip, succeeded: ok });
-  if (!ok) return { ok: false, reason: "wrong" };
-
-  const user = env.SINGLE_USER_ID
-    ? await db.query.users.findFirst({ where: (t, { eq: e }) => e(t.id, env.SINGLE_USER_ID ?? "") })
-    : await db.query.users.findFirst();
-  // Distinto de "not-configured" de proposito: banco vazio e variavel faltando
-  // sao problemas diferentes, e a mensagem generica mandava procurar no lugar
-  // errado. So' chega aqui quem ja' acertou a passphrase, entao nao vaza nada.
-  if (!user) return { ok: false, reason: "no-user" };
-
-  const store = await cookies();
-  store.set(SESSION_COOKIE, createSessionToken(user.id, nowInstant()), sessionCookieOptions());
-  return { ok: true };
-}
+export const readLiveSession = cache(async (): Promise<Session | null> => {
+  const session = await readSession();
+  if (!session) return null;
+  const row = await db.query.users.findFirst({ where: eq(users.id, session.sub) });
+  return row ? session : null;
+});
 
 export async function logout(): Promise<void> {
   const store = await cookies();

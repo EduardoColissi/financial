@@ -250,15 +250,16 @@ function formatterFor(timeZone: string): Intl.DateTimeFormat {
 /**
  * A data civil de agora no fuso informado.
  *
- * Unico ponto do sistema que le' o relogio. Recebe `fakeToday` para o QA poder
- * congelar o tempo — sem isso nao ha' como comparar a tela com o design (que
- * assume 01/08/2026) nem testar virada de mes.
+ * Unico ponto do sistema que le' o relogio, e le' sempre o relogio de verdade.
+ * Ja' houve aqui um parametro para congelar "hoje" numa data fixa, vindo de
+ * variavel de ambiente: servia para comparar a tela com o design. O design nao
+ * manda mais nos numeros, e uma data injetavel por ambiente e' um jeito de o app
+ * inteiro operar no dia errado sem ninguem notar.
+ *
+ * Quem precisa de tempo deterministico injeta a data por parametro — todo
+ * servico recebe `today` do `AppContext`, ninguem le' o relogio la' dentro.
  */
-export function todayInTimeZone(
-  timeZone: string = DEFAULT_TIME_ZONE,
-  fakeToday?: string
-): PlainDate {
-  if (fakeToday) return plainDate(fakeToday);
+export function todayInTimeZone(timeZone: string = DEFAULT_TIME_ZONE): PlainDate {
   return plainDate(formatterFor(timeZone).format(new Date()));
 }
 

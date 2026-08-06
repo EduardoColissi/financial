@@ -20,8 +20,8 @@ import { requireSession } from "./auth";
  * Contexto de requisicao.
  *
  * `today` entra aqui e desce por parametro para todo servico — nunca e' lido do
- * relogio la' dentro. E' o que permite congelar o tempo no QA e comparar a tela
- * com o design (que assume 01/08/2026).
+ * relogio la' dentro. E' o que torna cada servico testavel com uma data qualquer
+ * sem que o app rodando dependa de nada alem do relogio de verdade.
  */
 export interface AppContext {
   userId: string;
@@ -61,7 +61,7 @@ export const getContext = cache(async (): Promise<AppContext> => {
   });
 
   const timezone = row.timezone || env.APP_TIMEZONE || DEFAULT_TIME_ZONE;
-  const today = todayInTimeZone(timezone, env.fakeToday);
+  const today = todayInTimeZone(timezone);
 
   return {
     userId: row.id,

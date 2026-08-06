@@ -3,8 +3,8 @@ import { withoutBlanks } from "./env-input";
 
 describe("withoutBlanks", () => {
   it("remove a chave de valor vazio em vez de deixar string vazia", () => {
-    const out = withoutBlanks({ APP_FAKE_TODAY: "" });
-    expect("APP_FAKE_TODAY" in out).toBe(false);
+    const out = withoutBlanks({ SINGLE_USER_ID: "" });
+    expect("SINGLE_USER_ID" in out).toBe(false);
   });
 
   it("remove tambem valor so' com espaco", () => {

@@ -1,0 +1,93 @@
+.wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.swatch {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-5);
+  cursor: pointer;
+}
+
+/* O input fica invisivel mas continua focavel — a navegacao por teclado e o
+   leitor de tela dependem dele; some-lo com `display:none` quebraria os dois. */
+.swatch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.check {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-5);
+  border: 2px solid transparent;
+}
+
+.swatch input:checked + .check {
+  border-color: var(--fg);
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.swatch input:focus-visible + .check {
+  outline: 2px solid var(--pos-soft);
+  outline-offset: 2px;
+}
+
+/* A nona casa: cor livre. O tracejado a distingue das oito fixas antes de
+   qualquer clique — sem isso ela parece so' mais um preset. */
+.free {
+  border: 1px dashed var(--line);
+}
+
+.custom {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+
+/* O seletor nativo desenha o proprio quadrado, e ele ignora quase toda regra
+   de estilo. Em vez de brigar, encolhe e some atras do rotulo. */
+.native {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-5);
+  background: none;
+  cursor: pointer;
+}
+
+.native::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.native::-webkit-color-swatch {
+  border: none;
+  border-radius: 3px;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

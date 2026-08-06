@@ -10,6 +10,7 @@ import { FilterChips } from "@/features/lancamentos/filters.client";
 import { cx } from "@/lib/cx";
 import type { BillsResult, ChargeRow } from "@/services/charges";
 import s from "./Bills.module.css";
+import { PayCharge } from "./PayCharge.client";
 
 const FILTERS = [
   ["todas", "Todas"],
@@ -24,10 +25,13 @@ export function Bills({
   data,
   month,
   filter,
+  hoje,
 }: {
   data: BillsResult;
   month: RefMonth;
   filter: string;
+  /** Data de hoje, para o campo "pago em" nascer preenchido. */
+  hoje: string;
 }) {
   return (
     <>
@@ -40,12 +44,12 @@ export function Bills({
         <Stat
           label="Já pagas"
           value={<Money cents={data.paidCents} size="lg" tone="pos" />}
-          note={`${data.paidCount} de ${data.paidCount + data.autoOpen + data.manualOpen} quitadas`}
+          note={`${data.paidCount} de ${data.paidCount + data.openCount} quitadas`}
         />
         <Stat
           label="Em aberto"
           value={<Money cents={data.openCents} size="lg" tone="neg" />}
-          note={`${data.autoOpen} em débito automático · ${data.manualOpen} exigem ação`}
+          note={`${data.openCount} ainda em aberto`}
         />
         <Stat
           label="Fixas / variáveis"
@@ -102,8 +106,7 @@ export function Bills({
                         <span className={s.pillName}>{c.name}</span>
                         <span className={s.pillValue}>
                           {brl0(c.amountCents).replace("R$ ", "")}
-                          {c.autopay ? " · auto" : ""}
-                        </span>
+                                                  </span>
                       </span>
                     ))}
                     {cell.charges.length > MAX_PER_DAY ? (
@@ -139,7 +142,7 @@ export function Bills({
             {data.rows.length === 0 ? (
               <EmptyState>Nenhuma conta neste filtro.</EmptyState>
             ) : (
-              data.rows.map((c) => <BillRow key={c.id} charge={c} />)
+              data.rows.map((c) => <BillRow key={c.id} charge={c} hoje={hoje} />)
             )}
           </div>
         </Card>
@@ -148,7 +151,7 @@ export function Bills({
   );
 }
 
-function BillRow({ charge }: { charge: ChargeRow }) {
+function BillRow({ charge, hoje }: { charge: ChargeRow; hoje: string }) {
   return (
     <div className={s.row}>
       <span className={cx(s.box, charge.paid && s.boxPaid)} aria-hidden="true">
@@ -158,11 +161,18 @@ function BillRow({ charge }: { charge: ChargeRow }) {
         <span className={cx(s.rowName, charge.paid && s.rowNamePaid)}>{charge.name}</span>
         <span className={s.rowMeta}>
           dia {String(charge.day).padStart(2, "0")} · {charge.fixed ? "fixa" : "variável"} ·{" "}
-          {charge.categoryName} · {charge.autopay ? "débito automático" : "pagar manual"}
+          {charge.categoryName}
         </span>
       </span>
       <StatusPill tone={charge.tone}>{charge.paid ? "paga" : charge.phase}</StatusPill>
       <Money cents={charge.amountCents} size="sm" />
+      <PayCharge
+        id={charge.id}
+        amountCents={charge.amountCents}
+        paid={charge.paid}
+        onCredit={charge.onCredit}
+        hoje={hoje}
+      />
     </div>
   );
 }

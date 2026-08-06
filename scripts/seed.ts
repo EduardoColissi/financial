@@ -5,22 +5,19 @@ import { materializeMonth } from "../src/db/materialize";
 import * as schema from "../src/db/schema";
 import {
   ACCOUNTS,
-  ASSETS,
   CARDS,
   CASHFLOW_HISTORY,
   CATEGORIES,
   CONTRIBUTION,
   EXPECTED_TOTALS,
-  GOALS,
-  GROUPS,
   INCOME,
   ONE_OFF_EXPENSES,
   RECURRING,
-  SEGMENTS,
+  SECTORS,
   SYSTEM_CATEGORIES,
 } from "../src/db/seed-data";
 import { cycleFor } from "../src/domain/card-cycle";
-import { addMonths, firstDayOf, refMonth } from "../src/domain/period";
+import { addMonths, clampDay, firstDayOf, monthOf, todayInTimeZone } from "../src/domain/period";
 import { assertLocalOrExit, requireUrl } from "./_shared";
 
 /**
@@ -29,20 +26,50 @@ import { assertLocalOrExit, requireUrl } from "./_shared";
  * Idempotente: apaga o usuario do seed (cascade leva tudo junto) e reconstroi.
  * Ao final confere os totais — se o seed nao reproduzir os numeros do design,
  * nao ha' baseline para comparar a tela, e o passo falha.
+ *
+ * Ancorado no MES CORRENTE, nao em agosto/2026. O app le' o relogio de verdade,
+ * entao um seed cravado numa data fixa produziria um painel cujo "mes atual"
+ * esta' vazio — e cujos vencimentos ja' passaram todos. Tudo aqui e' relativo a
+ * `MONTH`: e' o que mantem os numeros do design validos em qualquer mes.
  */
 
-const SEED_EMAIL = "eu@meucaixa.local";
-const MONTH = refMonth("2026-08");
+/**
+ * Endereco proprio do seed. NUNCA o `GOOGLE_ALLOWED_EMAIL`.
+ *
+ * Este script e' destrutivo: apaga o usuario deste e-mail (cascade leva contas,
+ * cartoes e lancamentos junto) e reconstroi. Ele roda sozinho no `pnpm e2e`.
+ *
+ * Ja' esteve apontado para o e-mail real do dono, e o efeito foi exatamente o
+ * previsivel: uma rodada de teste apagou uma conta cadastrada a mao e derrubou
+ * a sessao. O usuario do seed e o usuario de verdade tem que ser linhas
+ * diferentes, para a suite nunca alcancar o que foi cadastrado pela tela.
+ */
+const SEED_EMAIL = "seed@meucaixa.local";
+const SEED_TZ = "America/Sao_Paulo";
+
+const MONTH = monthOf(todayInTimeZone(SEED_TZ));
+const PREV_MONTH = addMonths(MONTH, -1);
 const COMPETENCE = firstDayOf(MONTH);
 
 /**
- * As despesas de agosto ocorrem entre 27/07 e 01/08 — e' o que o design mostra
- * (TX vai de 27/07 a 01/08) e todas contam em agosto. E' exatamente a distincao
- * entre `occurred_on` e `competence_month`.
+ * Onde a instalacao "comeca": limite para tras da navegacao de mes e mes do
+ * aporte historico da carteira. Sete meses cobrem as cinco barras do grafico de
+ * fluxo com folga.
  */
-const CREDIT_DATE = "2026-07-20"; // dentro do ciclo 29/06-28/07, fatura vence 05/08
-const CASH_DATE = "2026-08-01";
-const FILLER_DATE = "2026-07-30";
+const HISTORY_START = addMonths(MONTH, -7);
+
+/**
+ * As despesas do mes ocorrem entre o fim do mes passado e o dia 1 — e' o que o
+ * design mostra (TX vai de 27/07 a 01/08) e todas contam no mes corrente. E'
+ * exatamente a distincao entre `occurred_on` e `competence_month`.
+ */
+// Dia 20 do mes passado: antes do fechamento de todo cartao do seed, entao cai
+// na fatura que vence neste mes — a relacao vale em qualquer mes, porque
+// `cycleFor` compara dia do mes com `closingDay`.
+const CREDIT_DATE = clampDay(PREV_MONTH, 20);
+const CASH_DATE = COMPETENCE;
+// `clampDay`, nao dia 30 cru: fevereiro nao tem dia 30 e `plainDate` recusaria.
+const FILLER_DATE = clampDay(PREV_MONTH, 30);
 
 async function main() {
   const url = requireUrl("direct");
@@ -57,34 +84,24 @@ async function main() {
 
     const [user] = await db
       .insert(schema.users)
-      .values({ email: SEED_EMAIL, name: "Eduardo", timezone: "America/Sao_Paulo" })
+      .values({ email: SEED_EMAIL, name: "Eduardo", timezone: SEED_TZ })
       .returning();
     if (!user) throw new Error("falhou ao criar usuario");
     const userId = user.id;
 
     await db.insert(schema.appSettings).values({
       userId,
-      startRefMonth: firstDayOf(refMonth("2026-01")),
+      startRefMonth: firstDayOf(HISTORY_START),
       maxFutureMonths: 24,
     });
 
-    // ── grupos e categorias ────────────────────────────────────────────────
-    const groupIds = new Map<string, string>();
-    for (const g of GROUPS) {
-      const [row] = await db
-        .insert(schema.categoryGroups)
-        .values({ userId, name: g.name, color: g.color, sortOrder: g.sortOrder })
-        .returning();
-      if (row) groupIds.set(g.name, row.id);
-    }
-
+    // ── categorias ─────────────────────────────────────────────────────────
     const categoryIds = new Map<string, string>();
     for (const [i, c] of CATEGORIES.entries()) {
       const [row] = await db
         .insert(schema.categories)
         .values({
           userId,
-          groupId: groupIds.get(c.group),
           name: c.name,
           color: c.color,
           kind: "expense",
@@ -102,6 +119,25 @@ async function main() {
       if (row) categoryIds.set(c.name, row.id);
     }
 
+    // ── setores de investimento ────────────────────────────────────────────
+    const sectorIds = new Map<string, string>();
+    for (const [i, sector] of SECTORS.entries()) {
+      const [row] = await db
+        .insert(schema.investmentSectors)
+        .values({
+          userId,
+          name: sector.name,
+          color: sector.color,
+          sharePercent: sector.sharePercent,
+          targetCents: "targetCents" in sector ? sector.targetCents : null,
+          annualTargetCents: sector.annualTargetCents,
+          isEmergencyFund: sector.isEmergencyFund,
+          sortOrder: i,
+        })
+        .returning();
+      if (row) sectorIds.set(sector.name, row.id);
+    }
+
     // ── contas e cartoes ───────────────────────────────────────────────────
     const accountIds = new Map<string, string>();
     for (const [i, a] of ACCOUNTS.entries()) {
@@ -114,8 +150,6 @@ async function main() {
           tag: a.tag,
           initials: a.initials,
           color: a.color,
-          openingBalanceCents: a.balanceCents,
-          openingBalanceOn: "2026-08-01",
           includeInCashTotal: a.includeInCashTotal,
           sortOrder: i,
         })
@@ -157,99 +191,8 @@ async function main() {
         amountCents: isVariable ? null : ((r as { amountCents?: number }).amountCents ?? null),
         isVariable,
         estimatedCents: isVariable ? (r as { estimatedCents: number }).estimatedCents : null,
-        autopay: r.autopay,
-        firstRefMonth: firstDayOf(refMonth(r.firstMonth)),
+        firstRefMonth: firstDayOf(addMonths(MONTH, r.firstMonthOffset)),
         installmentsTotal: "installments" in r ? r.installments : null,
-      });
-    }
-
-    // ── investimentos ──────────────────────────────────────────────────────
-    const segmentIds = new Map<string, string>();
-    for (const [i, s] of SEGMENTS.entries()) {
-      const [row] = await db
-        .insert(schema.investmentSegments)
-        .values({
-          userId,
-          name: s.name,
-          color: s.color,
-          targetPercent: String(s.targetPercent),
-          sortOrder: i,
-        })
-        .returning();
-      if (row) segmentIds.set(s.name, row.id);
-    }
-
-    const assetIds = new Map<string, string>();
-    for (const [i, a] of ASSETS.entries()) {
-      const [row] = await db
-        .insert(schema.investmentAssets)
-        .values({
-          userId,
-          segmentId: segmentIds.get(a.segment) ?? "",
-          name: a.name,
-          ticker: "ticker" in a ? a.ticker : null,
-          detail: a.detail,
-          sortOrder: i,
-        })
-        .returning();
-      if (!row) continue;
-      assetIds.set(a.name, row.id);
-
-      // Aporte historico (custo aplicado) e valor de mercado atual.
-      await db.insert(schema.investmentFlows).values({
-        userId,
-        assetId: row.id,
-        kind: "contribution",
-        occurredOn: "2026-01-15",
-        refMonth: firstDayOf(refMonth("2026-01")),
-        amountCents: a.investedCents,
-      });
-
-      // Valor do mes anterior, para o rendimento de agosto ser reconstruivel.
-      await db.insert(schema.investmentValuations).values([
-        {
-          userId,
-          assetId: row.id,
-          refMonth: firstDayOf(refMonth("2026-07")),
-          marketValueCents: a.valueCents - a.monthCents,
-          measuredOn: "2026-07-31",
-        },
-        {
-          userId,
-          assetId: row.id,
-          refMonth: COMPETENCE,
-          marketValueCents: a.valueCents,
-          measuredOn: "2026-08-01",
-        },
-      ]);
-
-      // Proventos: reinvestidos, sem lancamento associado — a regra C1 esta'
-      // gravada no CHECK flows_cash_link_ck, entao um transaction_id aqui seria
-      // recusado pelo banco.
-      if (a.dividendCents > 0) {
-        await db.insert(schema.investmentFlows).values({
-          userId,
-          assetId: row.id,
-          kind: "dividend",
-          occurredOn: "2026-08-01",
-          refMonth: COMPETENCE,
-          amountCents: a.dividendCents,
-          reinvested: true,
-        });
-      }
-    }
-
-    for (const [i, g] of GOALS.entries()) {
-      await db.insert(schema.goals).values({
-        userId,
-        name: g.name,
-        color: g.color,
-        targetCents: g.targetCents,
-        sourceMode: g.sourceMode,
-        manualAmountCents: "manualAmountCents" in g ? g.manualAmountCents : null,
-        linkedSegmentId: "linkedSegment" in g ? (segmentIds.get(g.linkedSegment) ?? null) : null,
-        deadlineLabel: g.deadlineLabel,
-        sortOrder: i,
       });
     }
 
@@ -258,9 +201,8 @@ async function main() {
       await materializeMonth(db, { userId }, addMonths(MONTH, i));
     }
 
-    // ── lancamentos de agosto ──────────────────────────────────────────────
+    // ── lancamentos do mes corrente ────────────────────────────────────────
     const renda = categoryIds.get("Renda") ?? "";
-    const aporte = categoryIds.get("Aporte") ?? "";
 
     for (const income of INCOME) {
       await db.insert(schema.transactions).values({
@@ -284,7 +226,9 @@ async function main() {
       competenceMonth: COMPETENCE,
       description: CONTRIBUTION.description,
       amountCents: CONTRIBUTION.amountCents,
-      categoryId: aporte,
+      // Aporte aponta para SETOR, nunca para categoria — e o CHECK
+      // `tx_category_ck` recusa a linha se as duas coisas vierem juntas.
+      sectorId: sectorIds.get(CONTRIBUTION.sector),
       method: "transfer",
       accountId: accountIds.get(CONTRIBUTION.account),
       settledOn: CASH_DATE,
@@ -326,7 +270,7 @@ async function main() {
       addSpent(e.category, e.amountCents);
     }
 
-    // Aluguel: unica conta que ja' venceu em 01/08.
+    // Aluguel: unica conta que ja' venceu, no dia 1.
     await db.insert(schema.transactions).values({
       userId,
       kind: "expense",
@@ -370,7 +314,7 @@ async function main() {
     for (const h of CASHFLOW_HISTORY) {
       await db.insert(schema.monthlyCashflowSnapshots).values({
         userId,
-        refMonth: firstDayOf(refMonth(h.month)),
+        refMonth: firstDayOf(addMonths(MONTH, h.monthOffset)),
         incomeCents: h.incomeCents,
         expenseCents: h.expenseCents,
         contributionCents: h.contributionCents,
@@ -405,17 +349,8 @@ async function verify(db: ReturnType<typeof drizzle<typeof schema>>, userId: str
     ["aporte", by.get("investment_out") ?? 0, EXPECTED_TOTALS.contributionCents],
   ];
 
-  const invested = await db.execute<{ total: string }>(sql`
-    select coalesce(sum(amount_cents),0)::text as total from investment_flows
-     where user_id = ${userId} and kind = 'contribution'
-  `);
-  checks.push(["aplicado", Number(invested.rows[0]?.total ?? 0), EXPECTED_TOTALS.investedCents]);
-
-  const portfolio = await db.execute<{ total: string }>(sql`
-    select coalesce(sum(market_value_cents),0)::text as total from investment_valuations
-     where user_id = ${userId} and ref_month = ${COMPETENCE}
-  `);
-  checks.push(["carteira", Number(portfolio.rows[0]?.total ?? 0), EXPECTED_TOTALS.portfolioCents]);
+  // "aplicado" e "carteira" sairam junto com a aba de investimentos: nao ha'
+  // mais `investment_flows` nem `investment_valuations` para conferir.
 
   let failed = 0;
   const brl = (c: number) =>

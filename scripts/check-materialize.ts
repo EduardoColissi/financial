@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { materializeMonth } from "../src/db/materialize";
 import * as schema from "../src/db/schema";
-import { addMonths, refMonth } from "../src/domain/period";
+import { addMonths, monthOf, todayInTimeZone } from "../src/domain/period";
 import { assertLocalOrExit, requireUrl } from "./_shared";
 
 /**
@@ -45,7 +45,9 @@ async function main() {
 
     // 10 materializacoes simultaneas do MESMO mes. Sem o advisory lock e o
     // UNIQUE, aqui e' onde a duplicata apareceria.
-    const mes = refMonth("2026-08");
+    // O mes corrente, que e' onde o seed poe os dados — cravar uma data aqui
+    // faria a prova rodar, com o tempo, num mes vazio.
+    const mes = monthOf(todayInTimeZone(user.timezone));
     await Promise.all(Array.from({ length: 10 }, () => materializeMonth(db, target, mes)));
 
     const depois = await contar();

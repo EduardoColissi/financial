@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { accounts, categories, creditCards, users } from "./core";
 import { paymentMethod, statementStatus, transactionKind, transactionSource } from "./enums";
+import { investmentSectors } from "./goals";
 
 /**
  * Lancamento. A unidade de movimento do sistema.
@@ -39,12 +40,29 @@ export const transactions = pgTable(
     competenceMonth: date("competence_month").notNull(),
     description: text("description").notNull(),
     amountCents: integer("amount_cents").notNull(),
-    categoryId: uuid("category_id").references(() => categories.id, { onDelete: "restrict" }),
+    /**
+     * `cascade`, e nao `restrict`: apagar conta, cartao ou categoria leva os
+     * lancamentos junto, por decisao do dono.
+     *
+     * O preco esta' dito em voz alta: nao e' "parei de usar esta conta", e' "este
+     * dinheiro nunca existiu" — totais de meses fechados mudam retroativamente.
+     * Por isso a tela nao pergunta "tem certeza?": ela conta quantos lancamentos
+     * vao junto e mostra o numero antes de deixar seguir.
+     */
+    categoryId: uuid("category_id").references(() => categories.id, { onDelete: "cascade" }),
+    /**
+     * Setor do aporte. Ocupa o lugar da categoria em `investment_out`.
+     *
+     * Aporte nao tem categoria de gasto: o que interessa saber dele e' para onde
+     * o dinheiro foi — reserva, previdencia, acoes —, e isso ja' e' o setor.
+     * Ter as duas coisas obrigava a cadastrar cada destino duas vezes.
+     */
+    sectorId: uuid("sector_id").references(() => investmentSectors.id, { onDelete: "cascade" }),
     method: paymentMethod("method").notNull(),
-    accountId: uuid("account_id").references(() => accounts.id, { onDelete: "restrict" }),
-    cardId: uuid("card_id").references(() => creditCards.id, { onDelete: "restrict" }),
+    accountId: uuid("account_id").references(() => accounts.id, { onDelete: "cascade" }),
+    cardId: uuid("card_id").references(() => creditCards.id, { onDelete: "cascade" }),
     transferAccountId: uuid("transfer_account_id").references((): AnyPgColumn => accounts.id, {
-      onDelete: "restrict",
+      onDelete: "cascade",
     }),
     /** Congelado no insert: se o dia de fechamento mudar depois, a fatura em que
      * a compra caiu nao pode mudar retroativamente. */
@@ -83,8 +101,16 @@ export const transactions = pgTable(
       sql`(${t.installmentSeq} is null) = (${t.installmentTotal} is null)
           and (${t.installmentSeq} is null or ${t.installmentSeq} between 1 and ${t.installmentTotal})`
     ),
-    // Transferencia nao tem categoria; todo o resto tem.
-    check("tx_category_ck", sql`(${t.kind} = 'transfer') = (${t.categoryId} is null)`),
+    // Transferencia e aporte nao tem categoria; todo o resto tem. No aporte
+    // quem ocupa esse lugar e' o setor, exigido logo abaixo.
+    check(
+      "tx_category_ck",
+      sql`(${t.kind} in ('transfer', 'investment_out', 'investment_in')) = (${t.categoryId} is null)`
+    ),
+    check(
+      "tx_sector_ck",
+      sql`(${t.kind} in ('investment_out', 'investment_in')) = (${t.sectorId} is not null)`
+    ),
     // Cartao e metodo credito andam juntos, sempre.
     check("tx_card_method_ck", sql`(${t.cardId} is not null) = (${t.method} = 'credit')`),
     // Cada tipo exige exatamente um destino coerente.

@@ -29,8 +29,12 @@ export const config = {
 
 /** Rotas que precisam responder sem sessao — e por que. */
 function isPublic(pathname: string): boolean {
-  // O formulario de entrada, senao o redirect vira loop.
+  // A tela de entrada, senao o redirect vira loop.
   if (pathname === "/login") return true;
+  // Ida e volta do OAuth. Quem esta' entrando ainda nao tem sessao — exigir uma
+  // aqui tornaria o login impossivel. O que protege estas duas rotas e' o
+  // `state` assinado no cookie do vaivem, nao o gate.
+  if (pathname.startsWith("/api/auth/google")) return true;
   // Um crawler precisa conseguir ler o proprio "nao me indexe".
   if (pathname === "/robots.txt") return true;
   // Cron da Vercel nao tem cookie; ele se autentica com CRON_SECRET no handler.

@@ -36,87 +36,70 @@ export const PALETTE = [
   "oklch(0.80 0.13 25)",
 ] as const;
 
-export const GROUPS = [
-  { name: "Essencial", color: "oklch(0.84 0.16 158)", sortOrder: 0 },
-  { name: "Qualidade de vida", color: "oklch(0.80 0.14 88)", sortOrder: 1 },
-  { name: "Desenvolvimento", color: "oklch(0.74 0.12 230)", sortOrder: 2 },
-] as const;
-
 /** `realCents` e' o total que a categoria PRECISA somar em agosto/2026. */
 export const CATEGORIES = [
   {
     name: "Moradia",
-    group: "Essencial",
     budgetCents: 300000,
     realCents: 295990,
     color: "oklch(0.84 0.16 158)",
   },
   {
     name: "Alimentação",
-    group: "Essencial",
     budgetCents: 140000,
     realCents: 118642,
     color: "oklch(0.82 0.15 88)",
   },
   {
     name: "Saúde",
-    group: "Essencial",
     budgetCents: 70000,
     realCents: 57800,
     color: "oklch(0.76 0.13 200)",
   },
   {
     name: "Transporte",
-    group: "Essencial",
     budgetCents: 70000,
     realCents: 62735,
     color: "oklch(0.74 0.13 265)",
   },
   {
     name: "Pets",
-    group: "Essencial",
     budgetCents: 15000,
     realCents: 9800,
     color: "oklch(0.80 0.14 128)",
   },
   {
     name: "Casa e manutenção",
-    group: "Essencial",
     budgetCents: 50000,
     realCents: 38990,
     color: "oklch(0.72 0.11 140)",
   },
   {
     name: "Lazer",
-    group: "Qualidade de vida",
     budgetCents: 40000,
     realCents: 33138,
     color: "oklch(0.80 0.13 25)",
   },
   {
     name: "Fitness",
-    group: "Qualidade de vida",
     budgetCents: 30000,
     realCents: 25890,
     color: "oklch(0.78 0.14 45)",
   },
   {
     name: "Assinaturas",
-    group: "Qualidade de vida",
     budgetCents: 30000,
     realCents: 26560,
     color: "oklch(0.76 0.14 320)",
   },
   {
     name: "Vestuário",
-    group: "Qualidade de vida",
     budgetCents: 30000,
     realCents: 25800,
     color: "oklch(0.78 0.12 350)",
   },
   {
     name: "Educação",
-    group: "Desenvolvimento",
     budgetCents: 60000,
     realCents: 43600,
     color: "oklch(0.74 0.12 230)",
@@ -126,8 +109,37 @@ export const CATEGORIES = [
 /** Categorias de sistema: nao pertencem a grupo de despesa e nao se apagam. */
 export const SYSTEM_CATEGORIES = [
   { name: "Renda", kind: "income" as const, color: "oklch(0.86 0.16 158)" },
-  { name: "Aporte", kind: "investment" as const, color: "oklch(0.74 0.13 210)" },
 ];
+
+/**
+ * Setores de investimento. O aporte aponta para um deles — nao ha' categoria de
+ * aporte, porque o destino do dinheiro JA' e' o setor.
+ */
+export const SECTORS = [
+  {
+    name: "Reserva de emergência",
+    color: "oklch(0.84 0.16 158)",
+    sharePercent: 60,
+    isEmergencyFund: true,
+    annualTargetCents: 2_400_000,
+  },
+  {
+    name: "Previdência",
+    color: "oklch(0.74 0.13 265)",
+    sharePercent: 25,
+    isEmergencyFund: false,
+    targetCents: 20_000_000,
+    annualTargetCents: 1_200_000,
+  },
+  {
+    name: "Viagem",
+    color: "oklch(0.82 0.15 88)",
+    sharePercent: 15,
+    isEmergencyFund: false,
+    targetCents: 1_500_000,
+    annualTargetCents: 800_000,
+  },
+] as const;
 
 export const ACCOUNTS = [
   {
@@ -212,6 +224,12 @@ export const CARDS = [
  * `kind: bill` = vence numa conta ou boleto (aba "Contas a pagar").
  * `kind: subscription` = cai na fatura de um cartao (aba "Assinaturas").
  * `installments` != null = parcelada, em qualquer um dos dois canais.
+ *
+ * `firstMonthOffset` e' a distancia, em meses, ate' o mes de referencia do seed —
+ * negativo porque toda regra comecou no passado. E' deslocamento, e nao mes
+ * absoluto, porque o seed segue o relogio: com `2026-05` cravado, a parcelada
+ * que o design mostra como "4 de 12" viraria 5, 6, 7 de 12 conforme o tempo
+ * passa, e o baseline deixaria de ser baseline.
  */
 export const RECURRING = [
   // ── contas em conta/boleto (BILLS do design) ──
@@ -223,8 +241,7 @@ export const RECURRING = [
     account: "Nubank · Conta",
     dueDay: 1,
     amountCents: 220000,
-    autopay: false,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Plano odontológico",
@@ -233,8 +250,7 @@ export const RECURRING = [
     card: "Itaú Click",
     dueDay: 2,
     amountCents: 8900,
-    autopay: true,
-    firstMonth: "2026-05",
+    firstMonthOffset: -3,
     installments: 12,
   },
   {
@@ -245,8 +261,7 @@ export const RECURRING = [
     account: "Itaú · Conta",
     dueDay: 5,
     amountCents: 11990,
-    autopay: true,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Condomínio",
@@ -256,8 +271,7 @@ export const RECURRING = [
     account: "Itaú · Conta",
     dueDay: 5,
     amountCents: 64000,
-    autopay: true,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Energia elétrica",
@@ -268,8 +282,7 @@ export const RECURRING = [
     dueDay: 7,
     isVariable: true,
     estimatedCents: 18740,
-    autopay: false,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Academia Iron",
@@ -279,8 +292,7 @@ export const RECURRING = [
     account: "Itaú · Conta",
     dueDay: 8,
     amountCents: 12990,
-    autopay: true,
-    firstMonth: "2025-06",
+    firstMonthOffset: -14,
   },
   {
     name: "Plano de saúde",
@@ -290,8 +302,7 @@ export const RECURRING = [
     account: "Itaú · Conta",
     dueDay: 10,
     amountCents: 48900,
-    autopay: true,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Água e esgoto",
@@ -302,8 +313,7 @@ export const RECURRING = [
     dueDay: 15,
     isVariable: true,
     estimatedCents: 7820,
-    autopay: false,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   // Parcela em BOLETO: quebra qualquer modelo em que parcela implique cartao.
   {
@@ -314,8 +324,7 @@ export const RECURRING = [
     account: "Itaú · Conta",
     dueDay: 18,
     amountCents: 34000,
-    autopay: false,
-    firstMonth: "2026-05",
+    firstMonthOffset: -3,
     installments: 12,
   },
   {
@@ -327,8 +336,7 @@ export const RECURRING = [
     dueDay: 20,
     isVariable: true,
     estimatedCents: 6240,
-    autopay: true,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Celular + dados",
@@ -337,8 +345,7 @@ export const RECURRING = [
     card: "Nubank Ultravioleta",
     dueDay: 22,
     amountCents: 6990,
-    autopay: true,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Seguro do carro",
@@ -348,8 +355,7 @@ export const RECURRING = [
     account: "Itaú · Conta",
     dueDay: 30,
     amountCents: 21460,
-    autopay: false,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
 
   // ── assinaturas no cartao (RECS do design) ──
@@ -360,8 +366,7 @@ export const RECURRING = [
     card: "Itaú Click",
     dueDay: 3,
     amountCents: 4990,
-    autopay: true,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Spotify Família",
@@ -370,8 +375,7 @@ export const RECURRING = [
     card: "Nubank Ultravioleta",
     dueDay: 9,
     amountCents: 3490,
-    autopay: true,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Netflix Premium",
@@ -380,8 +384,7 @@ export const RECURRING = [
     card: "Nubank Ultravioleta",
     dueDay: 14,
     amountCents: 5990,
-    autopay: true,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Seguro do celular",
@@ -390,8 +393,7 @@ export const RECURRING = [
     card: "Inter Gold",
     dueDay: 17,
     amountCents: 2490,
-    autopay: true,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Notion + Figma",
@@ -400,8 +402,7 @@ export const RECURRING = [
     card: "Nubank Ultravioleta",
     dueDay: 21,
     amountCents: 9600,
-    autopay: true,
-    firstMonth: "2025-01",
+    firstMonthOffset: -19,
   },
   {
     name: "Tênis de corrida",
@@ -410,8 +411,7 @@ export const RECURRING = [
     card: "Nubank Ultravioleta",
     dueDay: 26,
     amountCents: 12990,
-    autopay: false,
-    firstMonth: "2026-06",
+    firstMonthOffset: -2,
     installments: 6,
   },
   {
@@ -421,8 +421,7 @@ export const RECURRING = [
     card: "Nubank Ultravioleta",
     dueDay: 27,
     amountCents: 38990,
-    autopay: false,
-    firstMonth: "2026-04",
+    firstMonthOffset: -4,
     installments: 10,
   },
 ] as const;
@@ -436,6 +435,7 @@ export const CONTRIBUTION = {
   description: "Aporte mensal · corretora",
   amountCents: 260000,
   account: "Nubank · Conta",
+  sector: "Reserva de emergência",
   day: 1,
 } as const;
 
@@ -483,196 +483,19 @@ export const ONE_OFF_EXPENSES = [
   },
 ] as const;
 
-export const SEGMENTS = [
-  { name: "Ações", color: "oklch(0.84 0.16 158)", targetPercent: 30 },
-  { name: "Fundos imobiliários", color: "oklch(0.76 0.13 200)", targetPercent: 15 },
-  { name: "Renda fixa", color: "oklch(0.82 0.15 88)", targetPercent: 20 },
-  { name: "Reserva · caixinhas", color: "oklch(0.80 0.14 128)", targetPercent: 25 },
-  { name: "Internacional", color: "oklch(0.76 0.14 320)", targetPercent: 5 },
-  { name: "Cripto", color: "oklch(0.80 0.13 25)", targetPercent: 5 },
-] as const;
-
-/** aplicado / saldo / rendimento do mes / proventos — tudo em centavos. */
-export const ASSETS = [
-  {
-    name: "PETR4 · Petrobras PN",
-    ticker: "PETR4",
-    segment: "Ações",
-    investedCents: 680000,
-    valueCents: 742000,
-    monthCents: 14800,
-    dividendCents: 9600,
-    detail: "340 cotas · DY 11,2%",
-  },
-  {
-    name: "ITSA4 · Itaúsa",
-    ticker: "ITSA4",
-    segment: "Ações",
-    investedCents: 520000,
-    valueCents: 561000,
-    monthCents: 9600,
-    dividendCents: 4200,
-    detail: "520 cotas · DY 6,4%",
-  },
-  {
-    name: "BBSE3 · BB Seguridade",
-    ticker: "BBSE3",
-    segment: "Ações",
-    investedCents: 340000,
-    valueCents: 368000,
-    monthCents: 6200,
-    dividendCents: 3800,
-    detail: "96 cotas · DY 8,1%",
-  },
-  {
-    name: "WEGE3 · WEG",
-    ticker: "WEGE3",
-    segment: "Ações",
-    investedCents: 290000,
-    valueCents: 317000,
-    monthCents: 4400,
-    dividendCents: 800,
-    detail: "58 cotas · DY 1,1%",
-  },
-  {
-    name: "MXRF11 · Maxi Renda",
-    ticker: "MXRF11",
-    segment: "Fundos imobiliários",
-    investedCents: 360000,
-    valueCents: 379000,
-    monthCents: 3400,
-    dividendCents: 3400,
-    detail: "372 cotas · rende mensal",
-  },
-  {
-    name: "HGLG11 · CSHG Logística",
-    ticker: "HGLG11",
-    segment: "Fundos imobiliários",
-    investedCents: 320000,
-    valueCents: 341000,
-    monthCents: 2900,
-    dividendCents: 2900,
-    detail: "21 cotas · galpões",
-  },
-  {
-    name: "KNCR11 · Kinea Rendimentos",
-    ticker: "KNCR11",
-    segment: "Fundos imobiliários",
-    investedCents: 180000,
-    valueCents: 192000,
-    monthCents: 1600,
-    dividendCents: 1600,
-    detail: "18 cotas · CRI CDI",
-  },
-  {
-    name: "Tesouro IPCA+ 2035",
-    segment: "Renda fixa",
-    investedCents: 820000,
-    valueCents: 914000,
-    monthCents: 7800,
-    dividendCents: 0,
-    detail: "IPCA + 6,12% a.a.",
-  },
-  {
-    name: "CDB Inter · 112% CDI",
-    segment: "Renda fixa",
-    investedCents: 540000,
-    valueCents: 618000,
-    monthCents: 5200,
-    dividendCents: 0,
-    detail: "vence 03/2028 · D+0",
-  },
-  {
-    name: "Caixinha Nubank · 100% CDI",
-    segment: "Reserva · caixinhas",
-    investedCents: 980000,
-    valueCents: 1024000,
-    monthCents: 8400,
-    dividendCents: 0,
-    detail: "liquidez imediata",
-  },
-  {
-    name: "Caixinha Turbo · 110% CDI",
-    segment: "Reserva · caixinhas",
-    investedCents: 760000,
-    valueCents: 816000,
-    monthCents: 7100,
-    dividendCents: 0,
-    detail: "resgate em D+1",
-  },
-  {
-    name: "IVVB11 · S&P 500",
-    ticker: "IVVB11",
-    segment: "Internacional",
-    investedCents: 300000,
-    valueCents: 346000,
-    monthCents: 5800,
-    dividendCents: 0,
-    detail: "18 cotas · dólar embutido",
-  },
-  {
-    name: "Bitcoin",
-    segment: "Cripto",
-    investedCents: 140000,
-    valueCents: 178000,
-    monthCents: -4200,
-    dividendCents: 0,
-    detail: "0,0092 BTC",
-  },
-  {
-    name: "Ethereum",
-    segment: "Cripto",
-    investedCents: 62000,
-    valueCents: 46000,
-    monthCents: -1800,
-    dividendCents: 0,
-    detail: "0,21 ETH",
-  },
-] as const;
-
 /**
- * Metas.
+ * Historico do grafico de 6 meses (FLUXO do design), em centavos.
  *
- * "Reserva de emergência" e' 18.400 no design — exatamente a soma dos dois
- * ativos do segmento "Reserva · caixinhas" (10.240 + 8.160). Nao e'
- * coincidencia, entao e' modelada como vinculada ao segmento em vez de valor
- * digitado: senao o usuario mantem o mesmo numero em dois lugares e eles
- * divergem no primeiro mes.
+ * `monthOffset` conta para tras a partir do mes de referencia do seed: -5 e' o
+ * mes mais antigo da barra, -1 o mes passado. O sexto e' o corrente, que sai dos
+ * lancamentos de verdade e por isso nao esta' aqui.
  */
-export const GOALS = [
-  {
-    name: "Reserva de emergência",
-    targetCents: 2400000,
-    sourceMode: "linked_segment" as const,
-    linkedSegment: "Reserva · caixinhas",
-    deadlineLabel: "6 meses de custo",
-    color: "oklch(0.80 0.14 128)",
-  },
-  {
-    name: "Viagem · Patagônia",
-    targetCents: 800000,
-    sourceMode: "manual" as const,
-    manualAmountCents: 320000,
-    deadlineLabel: "meta out/2027",
-    color: "oklch(0.76 0.13 200)",
-  },
-  {
-    name: "Trocar o carro",
-    targetCents: 3000000,
-    sourceMode: "manual" as const,
-    manualAmountCents: 640000,
-    deadlineLabel: "meta dez/2028",
-    color: "oklch(0.82 0.15 88)",
-  },
-] as const;
-
-/** Historico do grafico de 6 meses (FLUXO do design), em centavos. */
 export const CASHFLOW_HISTORY = [
-  { month: "2026-03", incomeCents: 1145000, expenseCents: 742000, contributionCents: 200000 },
-  { month: "2026-04", incomeCents: 1190000, expenseCents: 632000, contributionCents: 240000 },
-  { month: "2026-05", incomeCents: 1150000, expenseCents: 718000, contributionCents: 220000 },
-  { month: "2026-06", incomeCents: 1190000, expenseCents: 689000, contributionCents: 240000 },
-  { month: "2026-07", incomeCents: 1240000, expenseCents: 603800, contributionCents: 260000 },
+  { monthOffset: -5, incomeCents: 1145000, expenseCents: 742000, contributionCents: 200000 },
+  { monthOffset: -4, incomeCents: 1190000, expenseCents: 632000, contributionCents: 240000 },
+  { monthOffset: -3, incomeCents: 1150000, expenseCents: 718000, contributionCents: 220000 },
+  { monthOffset: -2, incomeCents: 1190000, expenseCents: 689000, contributionCents: 240000 },
+  { monthOffset: -1, incomeCents: 1240000, expenseCents: 603800, contributionCents: 260000 },
 ] as const;
 
 /** Totais que o seed TEM que reproduzir. Sao o criterio de aceite do passo. */
@@ -681,6 +504,4 @@ export const EXPECTED_TOTALS = {
   incomeCents: 1240000,
   contributionCents: 260000,
   nubankClosedCents: 284287,
-  investedCents: 6292000,
-  portfolioCents: 6842000,
 } as const;

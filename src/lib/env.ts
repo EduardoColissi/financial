@@ -13,26 +13,38 @@ const schema = z.object({
   DATABASE_URL_UNPOOLED: z.string().min(1).optional(),
 
   AUTH_SECRET: z.string().min(1).optional(),
-  APP_PASSWORD_HASH: z.string().min(1).optional(),
   SESSION_MAX_AGE_DAYS: z.coerce.number().int().positive().default(30),
+
+  /**
+   * Credenciais do cliente OAuth criado no Google Cloud Console.
+   *
+   * Opcionais no schema para o app subir sem elas — sem isso, `pnpm build` e os
+   * testes exigiriam segredo de verdade. Faltando qualquer uma, o login recusa
+   * com "nao configurado", que e' um erro que se le'.
+   */
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+
+  /**
+   * A UNICA conta que entra. Nao ha' cadastro: quem nao for este e-mail e'
+   * recusado no callback, mesmo tendo autenticado no Google com sucesso.
+   */
+  GOOGLE_ALLOWED_EMAIL: z.string().email().optional(),
+
+  /**
+   * Base publica do app, usada para montar o `redirect_uri`.
+   *
+   * Nao e' derivada do `Host` da requisicao de proposito: esse cabecalho vem do
+   * cliente, e deixar o destino do OAuth depender dele e' como se abre um open
+   * redirect. O valor tem que bater EXATAMENTE com o registrado no Google —
+   * divergir da' `redirect_uri_mismatch`, que falha fechado.
+   */
+  APP_URL: z.string().url().default("http://localhost:3005"),
 
   CRON_SECRET: z.string().min(1).optional(),
 
   APP_TIMEZONE: z.string().min(1).default("America/Sao_Paulo"),
   SINGLE_USER_ID: z.string().uuid().optional(),
-
-  /**
-   * Congela "hoje". Existe para o QA conseguir comparar a tela com o design,
-   * que assume 01/08/2026 — sem isso, "vence em 7 dias" e "na fatura x prevista"
-   * mudam todo dia e nao ha' como testar.
-   *
-   * Ignorada em producao de proposito: um valor esquecido aqui faria o app
-   * inteiro operar numa data errada, silenciosamente.
-   */
-  APP_FAKE_TODAY: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
 
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
 });
@@ -56,9 +68,4 @@ function load() {
   return parsed.data;
 }
 
-const parsed = load();
-
-export const env = {
-  ...parsed,
-  fakeToday: parsed.NODE_ENV === "production" ? undefined : parsed.APP_FAKE_TODAY,
-} as const;
+export const env = load();

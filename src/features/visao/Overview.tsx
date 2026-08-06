@@ -6,70 +6,117 @@ import {
   CategoryDot,
   EmptyState,
   MicroLabel,
-  Notice,
   SectionHeader,
 } from "@/components/ui/primitives";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { widthPercent } from "@/domain/math";
 import { brl, type Cents, cents, compactK, maxCents } from "@/domain/money";
 import { shortDate } from "@/domain/period";
+import type { CashView } from "@/services/cash";
 import type { OverviewData } from "@/services/overview";
-import type { AccountBalance, CategoriesResult, TransactionRow } from "@/services/queries";
+import type { CategoriesResult, TransactionRow } from "@/services/queries";
 import s from "./Overview.module.css";
-
-const GROUP_COLOR: Record<string, string> = {
-  Essencial: "var(--group-essential)",
-  "Qualidade de vida": "var(--group-quality)",
-  Desenvolvimento: "var(--group-growth)",
-};
 
 export function Overview({
   data,
   categories,
   latest,
-  accounts,
-  cashTotalCents,
+  cash,
 }: {
   data: OverviewData;
   categories: CategoriesResult;
   latest: TransactionRow[];
-  accounts: AccountBalance[];
-  cashTotalCents: Cents;
+  cash: CashView;
 }) {
   const maxFlow = Math.max(1, ...data.flow.map((m) => Math.max(m.incomeCents, m.expenseCents)));
-  const perDay = cents(Math.round(Math.max(0, data.freeCents) / 30));
 
   return (
     <>
+      {/*
+        Os dois números do meio são o par que o dono pediu, e a diferença entre
+        eles é o ponto: EM CONTA é o dinheiro que existe agora; SOBRA é o que
+        vai restar depois de pagar tudo que este mês ainda deve. Convergem
+        quando não há mais nada pendente — e a nota abaixo diz quanto falta.
+      */}
       <div className={s.kpis}>
-        <Kpi label="Receitas do mês" value={data.incomeCents} tone="pos" note="salário e freelas" />
+        <Kpi label="Receitas do mês" value={data.incomeCents} tone="pos" note="entradas do mês" />
+        {/*
+          O mês abre do zero. Se há algo aqui vindo do mês anterior, é porque
+          sobrou e não foi aportado — e a nota diz isso, em vez de deixar o
+          número parecer saldo bancário.
+        */}
+        <Kpi
+          label="Em conta"
+          testId="em-conta"
+          value={cash.cashCents}
+          tone="info"
+          note={
+            cash.carriedCents !== 0
+              ? `${brl(cash.carriedCents)} sobraram do mês passado`
+              : cash.settled
+                ? "tudo pago — nada a descontar"
+                : `ainda não descontou ${brl(cash.pendingCents)} a pagar`
+          }
+        />
+        <Kpi
+          label="Sobra"
+          testId="sobra"
+          value={cash.leftoverCents}
+          tone="onAccent"
+          hero
+          note={
+            cash.settled
+              ? "mês fechado — igual ao que há em conta"
+              : "já descontando tudo que falta pagar"
+          }
+        />
         <Kpi
           label="Despesas do mês"
           value={data.expenseCents}
           tone="neg"
           note={`${fmtPct(data.expenseCents, data.incomeCents)} da renda · ${data.categoryCount} categorias`}
         />
-        <Kpi
-          label="Livre para gastar"
-          value={data.freeCents}
-          tone="onAccent"
-          hero
-          note={`após contas e aporte · ${brl(perDay)}/dia`}
-        />
-        <Kpi
-          label="Aporte do mês"
-          value={data.contributionCents}
-          tone="info"
-          note={`${fmtPct(data.contributionCents, data.incomeCents)} da renda · saída de caixa`}
-        />
       </div>
 
-      <Notice>
-        Rendimento da carteira ({brl(data.investmentReturnCents)} no mês, sendo{" "}
-        {brl(data.dividendCents)} de proventos) é reinvestido e <strong>não</strong> entra no fluxo
-        do mês. Do caixa sai apenas o aporte de {brl(data.contributionCents)} — resgates, quando
-        houver, entram como receita.
-      </Notice>
+      {/*
+        O mês passado fechou com sobra e ninguém aportou. Aportar tira do caixa,
+        então esse dinheiro está parado — e é justamente o que o dono pediu para
+        o painel cutucar na virada do mês.
+      */}
+      {cash.previousUninvestedCents > 0 ? (
+        <div className={`${s.health} ${s.carryNotice}`}>
+          <HealthItem
+            label="Sobrou do mês passado e não foi investido"
+            value={brl(cash.previousUninvestedCents)}
+            note="veio para este mês em vez de virar aporte"
+            alerta
+          />
+        </div>
+      ) : null}
+
+      {/*
+        Três medidas de saúde que não cabem nos KPIs: o custo de existir, a meta
+        de reserva que ele define, e há quanto tempo o painel não recebe um
+        lançamento — que é o que denuncia número bonito em cima de dado velho.
+      */}
+      <div className={s.health}>
+        <HealthItem
+          label="Custo de vida"
+          value={brl(cash.costOfLivingCents)}
+          note="média das contas obrigatórias"
+        />
+        <HealthItem
+          label="Reserva de emergência"
+          value={brl(cash.emergencyTargetCents)}
+          note="6× o custo de vida"
+        />
+        <HealthItem
+          label="Último lançamento"
+          value={desdeQuando(data.lastEntryAt)}
+          note={data.lastEntryAt ? quandoExato(data.lastEntryAt) : "nada lançado ainda"}
+          alerta={precisaLancar(data.lastEntryAt)}
+        />
+      </div>
 
       <div className={s.grid}>
         <div className={s.col}>
@@ -111,45 +158,52 @@ export function Overview({
             </div>
           </Card>
 
+          {/*
+            Era "por grupo e categoria", com Essencial / Qualidade de vida /
+            Desenvolvimento por cima. O nivel de grupo saiu: o agrupamento que
+            interessa e' este — todas as despesas do mes, separadas por
+            categoria, da maior para a menor.
+          */}
           <Card>
             <SectionHeader
-              title="Gastos por grupo e categoria"
+              title="Gastos por categoria"
               right={
                 <MicroLabel>{fmtPct(data.expenseCents, data.incomeCents)} da renda</MicroLabel>
               }
             />
-            <div className={s.list}>
-              {categories.groups.map((g) => (
-                <div key={g.id} className={s.groupRow}>
-                  <div className={s.groupHead}>
-                    <span className={s.groupName}>{g.name}</span>
-                    <span>
-                      <Money cents={g.spentCents} size="sm" />{" "}
-                      <Pct value={pctOf(g.spentCents, data.incomeCents)} tone="muted" />
-                    </span>
-                  </div>
-                  <StackedBar
-                    height={8}
-                    label={`Composição de ${g.name}`}
-                    segments={g.categories.map((c) => ({
-                      id: c.id,
-                      label: c.name,
-                      value: c.spentCents,
-                      color: c.color,
-                    }))}
-                  />
-                  <div className={s.groupCats}>
-                    {g.categories.slice(0, 4).map((c) => (
-                      <span key={c.id} className={s.groupCat}>
-                        <CategoryDot color={c.color} size={7} />
-                        {c.name}
-                        <Money cents={c.spentCents} size="xs" tone="muted" compact />
+            {categories.categories.length === 0 ? (
+              <EmptyState>Nenhuma despesa neste mês.</EmptyState>
+            ) : (
+              <>
+                <StackedBar
+                  height={10}
+                  label="Composição das despesas do mês"
+                  segments={categories.categories.map((c) => ({
+                    id: c.id,
+                    label: c.name,
+                    value: c.spentCents,
+                    color: c.color,
+                  }))}
+                />
+                <div className={s.list}>
+                  {categories.categories.map((c) => (
+                    <div key={c.id} className={s.listRow}>
+                      <span className={s.listMain}>
+                        <CategoryDot color={c.color} size={8} />
+                        <span className={s.listName}>{c.name}</span>
+                        <span className={s.listMeta}>
+                          {c.count === 1 ? "1 lançamento" : `${c.count} lançamentos`}
+                        </span>
                       </span>
-                    ))}
-                  </div>
+                      <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <Pct value={pctOf(c.spentCents, data.expenseCents)} tone="muted" />
+                        <Money cents={c.spentCents} size="sm" />
+                      </span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </Card>
 
           <Card>
@@ -197,7 +251,7 @@ export function Overview({
                       <span className={s.listName}>{d.name}</span>
                       <span className={s.listMeta}>
                         {shortDate(d.dueDate)} · {d.fixed ? "fixa" : "variável"} ·{" "}
-                        {d.autopay ? "auto" : "manual"}
+                        {d.categoryName}
                       </span>
                     </span>
                     <Money cents={d.amountCents} size="sm" />
@@ -216,11 +270,11 @@ export function Overview({
               height={12}
               label="Distribuição da renda do mês"
               segments={[
-                ...categories.groups.map((g) => ({
-                  id: g.id,
-                  label: g.name,
-                  value: g.spentCents,
-                  color: GROUP_COLOR[g.name] ?? "var(--fg-mut)",
+                ...categories.categories.map((c) => ({
+                  id: c.id,
+                  label: c.name,
+                  value: c.spentCents,
+                  color: c.color,
                 })),
                 {
                   id: "aporte",
@@ -238,11 +292,11 @@ export function Overview({
             />
             <div style={{ marginTop: 12 }}>
               {[
-                ...categories.groups.map((g) => ({
-                  id: g.id,
-                  name: g.name,
-                  value: g.spentCents,
-                  color: GROUP_COLOR[g.name] ?? "var(--fg-mut)",
+                ...categories.categories.map((c) => ({
+                  id: c.id,
+                  name: c.name,
+                  value: c.spentCents,
+                  color: c.color,
                 })),
                 {
                   id: "aporte",
@@ -270,34 +324,6 @@ export function Overview({
               ))}
             </div>
           </Card>
-
-          <Card>
-            <SectionHeader title="Saldos em conta" />
-            <div className={s.list}>
-              {accounts.map((a) => (
-                <div key={a.id} className={s.account}>
-                  <span className={s.listMain}>
-                    <span
-                      className={s.accountBadge}
-                      style={{ "--badge-color": a.color } as CSSProperties}
-                      aria-hidden="true"
-                    >
-                      {a.initials}
-                    </span>
-                    <span style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                      <span className={s.listName}>{a.name}</span>
-                      <span className={s.listMeta}>{a.tag ?? a.type}</span>
-                    </span>
-                  </span>
-                  <Money cents={a.balanceCents} size="sm" />
-                </div>
-              ))}
-            </div>
-            <div className={s.total}>
-              <MicroLabel>Total em caixa</MicroLabel>
-              <Money cents={cashTotalCents} size="md" tone="pos" />
-            </div>
-          </Card>
         </div>
       </div>
     </>
@@ -310,20 +336,73 @@ function Kpi({
   note,
   tone,
   hero,
+  testId,
 }: {
   label: string;
   value: Cents;
   note: string;
   tone: "pos" | "neg" | "info" | "onAccent";
   hero?: boolean;
+  /**
+   * Gancho de teste explicito.
+   *
+   * Casar por texto aqui e' fragil: "Em conta" tambem e' o rotulo do rodape da
+   * barra lateral, e um seletor por texto pegava o errado sem avisar — foi
+   * exatamente assim que um spec passou a comparar o numero errado.
+   */
+  testId?: string;
 }) {
   return (
-    <div className={hero ? `${s.kpi} ${s.kpiHero}` : s.kpi}>
+    <div className={hero ? `${s.kpi} ${s.kpiHero}` : s.kpi} data-kpi={testId}>
       <span className={s.kpiLabel}>
         <MicroLabel>{label}</MicroLabel>
       </span>
       <Money cents={value} size="xl" tone={tone} />
       <span className={s.kpiNote}>{note}</span>
+    </div>
+  );
+}
+
+/** "há 3 dias", "hoje" — o que se quer saber e' a distancia, nao a data. */
+function desdeQuando(at: Date | null): string {
+  if (!at) return "—";
+  const dias = Math.floor((Date.now() - at.getTime()) / 86_400_000);
+  if (dias <= 0) return "hoje";
+  if (dias === 1) return "ontem";
+  return `há ${dias} dias`;
+}
+
+function quandoExato(at: Date): string {
+  return at.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Três dias sem lançar já é o bastante para o mês começar a mentir. */
+function precisaLancar(at: Date | null): boolean {
+  if (!at) return true;
+  return Date.now() - at.getTime() > 3 * 86_400_000;
+}
+
+function HealthItem({
+  label,
+  value,
+  note,
+  alerta,
+}: {
+  label: string;
+  value: string;
+  note: string;
+  alerta?: boolean;
+}) {
+  return (
+    <div className={alerta ? `${s.healthItem} ${s.healthAlert}` : s.healthItem}>
+      <MicroLabel>{label}</MicroLabel>
+      <span className={s.healthValue}>{value}</span>
+      <span className={s.healthNote}>{note}</span>
     </div>
   );
 }

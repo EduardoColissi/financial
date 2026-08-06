@@ -15,11 +15,12 @@ import { brl } from "@/domain/money";
 import { partsOfDate, shortDate } from "@/domain/period";
 import type { CardsResult, CardView } from "@/services/cards";
 import s from "./Cards.module.css";
+import { PayStatement } from "./PayStatement.client";
 
 const PHASE_LABEL = { paga: "fatura paga", fechada: "fatura em aberto", aberta: "fatura aberta" };
 const PHASE_TONE = { paga: "ok", fechada: "warn", aberta: "neutral" } as const;
 
-export function Cards({ data }: { data: CardsResult }) {
+export function Cards({ data, hoje }: { data: CardsResult; hoje: string }) {
   return (
     <>
       <Notice tone={data.openCount > 0 ? "warn" : "pos"}>
@@ -34,14 +35,14 @@ export function Cards({ data }: { data: CardsResult }) {
             <EmptyState>Nenhum cartão cadastrado.</EmptyState>
           </Card>
         ) : (
-          data.cards.map((card) => <CardPanel key={card.id} card={card} />)
+          data.cards.map((card) => <CardPanel key={card.id} card={card} hoje={hoje} />)
         )}
       </div>
     </>
   );
 }
 
-function CardPanel({ card }: { card: CardView }) {
+function CardPanel({ card, hoje }: { card: CardView; hoje: string }) {
   return (
     <Card>
       <div className={s.head}>
@@ -106,6 +107,18 @@ function CardPanel({ card }: { card: CardView }) {
               <span className={s.dateValue}>{card.daysToCloseLabel}</span>
             </span>
           </div>
+
+          {/*
+            O único ponto em que dinheiro de cartão sai do caixa. Enquanto a
+            fatura não é paga, ela conta em "pendente" e derruba a sobra sem
+            tocar no "em conta" — pagar aqui é o que faz os dois convergirem.
+          */}
+          <PayStatement
+            statementId={card.statementId}
+            amountCents={card.toPayCents}
+            paid={card.paid}
+            hoje={hoje}
+          />
 
           <div className={s.limitRow}>
             <MicroLabel>Limite usado</MicroLabel>

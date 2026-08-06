@@ -25,8 +25,9 @@ export interface Session {
 class MissingSecretError extends Error {
   constructor() {
     super(
-      "AUTH_SECRET nao configurado. Gere um com `pnpm auth:hash` e use um valor " +
-        "DIFERENTE por ambiente — senao um cookie de preview abre a producao."
+      'AUTH_SECRET nao configurado. Gere com: node -e "console.log(' +
+        "require('crypto').randomBytes(32).toString('base64url'))\" — e use um valor " +
+        "DIFERENTE por ambiente, senao um cookie de preview abre a producao."
     );
   }
 }

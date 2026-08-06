@@ -1,0 +1,316 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.section {
+  background: var(--surface);
+  border: 1px solid var(--stroke);
+  border-radius: var(--r-11);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.sectionSub {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  font-family: var(--font-mono-stack);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fg-mut-2);
+}
+
+.empty {
+  margin: 0;
+  font-family: var(--font-mono-stack);
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+/* ── lista ─────────────────────────────────────────────────────────────── */
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.row {
+  border: 1px solid var(--stroke-soft);
+  border-radius: var(--r-7);
+  padding: 10px 12px;
+}
+
+.rowOff {
+  opacity: 0.5;
+}
+
+.rowLine {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rowName {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rowSub {
+  font-family: var(--font-mono-stack);
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--fg-mut-2);
+}
+
+.rowValue {
+  font-family: var(--font-mono-stack);
+  font-size: 12px;
+  color: var(--fg-mut);
+  white-space: nowrap;
+}
+
+.holder {
+  font-family: var(--font-mono-stack);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-mut-2);
+  border: 1px solid var(--stroke-soft);
+  border-radius: 999px;
+  padding: 2px 7px;
+}
+
+.badge {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-7);
+  color: var(--on-accent);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+}
+
+/* ── formulario ────────────────────────────────────────────────────────── */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid var(--stroke-strong);
+  border-radius: var(--r-7);
+  padding: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.label {
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mut-2);
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--stroke-strong);
+  background: var(--surface-input);
+  border-radius: var(--r-5);
+  padding: 9px 10px;
+  outline: none;
+  font-family: var(--font-mono-stack);
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--fg);
+}
+
+.input:focus {
+  border-color: var(--pos-soft);
+}
+
+.hint {
+  font-family: var(--font-mono-stack);
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: var(--fg-dim);
+}
+
+.fieldError {
+  margin: 0;
+  font-family: var(--font-mono-stack);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--neg);
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.float {
+  margin: 0;
+  font-family: var(--font-mono-stack);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fg-mut-2);
+}
+
+/* As regras de cor moram em `components/ui/ColorPicker.module.css`. */
+
+/* ── botoes ────────────────────────────────────────────────────────────── */
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.primary {
+  border: none;
+  border-radius: var(--r-5);
+  background: var(--grad-hero);
+  color: var(--on-accent);
+  font-weight: 600;
+  font-size: 11.5px;
+  line-height: 1;
+  padding: 10px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ghost {
+  border: 1px solid var(--stroke-strong);
+  border-radius: var(--r-5);
+  background: transparent;
+  color: var(--fg-mut);
+  font-family: var(--font-mono-stack);
+  font-size: 10.5px;
+  line-height: 1;
+  padding: 8px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ghost:hover {
+  color: var(--fg);
+  border-color: var(--fg-dim);
+}
+
+/* ── confirmação de exclusão ───────────────────────────────────────────── */
+
+/*
+ * Ocupa a linha inteira de propósito. Um popover pequeno ao lado do botão
+ * convida ao clique reflexo; um bloco que substitui a linha obriga a ler o que
+ * vai junto antes de confirmar.
+ */
+.confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+  border: 1px solid var(--stroke-strong);
+  border-radius: var(--r-7);
+  padding: 10px 12px;
+}
+
+/* Só quando há dependentes: a moldura vermelha diferencia "some um cadastro
+   vazio" de "somem meses de histórico". */
+.confirmHeavy {
+  border-color: var(--neg);
+  background: rgba(248, 113, 113, 0.08);
+}
+
+.confirmText {
+  flex: 1;
+  min-width: 240px;
+  font-family: var(--font-mono-stack);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--fg-mut);
+}
+
+.danger {
+  border: none;
+  border-radius: var(--r-5);
+  background: var(--neg);
+  color: #1b0e0e;
+  font-weight: 600;
+  font-size: 11.5px;
+  line-height: 1;
+  padding: 10px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.danger:hover {
+  filter: brightness(1.08);
+}

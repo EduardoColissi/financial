@@ -18,10 +18,6 @@ export default function globalSetup() {
   const userId = saida.match(/SINGLE_USER_ID=([0-9a-f-]{36})/)?.[1];
   if (!userId) throw new Error("o seed nao imprimiu o SINGLE_USER_ID");
 
-  // O limite de tentativas e' estado compartilhado no banco: sobra de uma
-  // execucao anterior bloquearia o spec de senha errada.
-  execFileSync("pnpm", ["db:clear-attempts"], { stdio: "inherit", shell: true });
-
   mkdirSync(dirname(STORAGE_STATE), { recursive: true });
   writeFileSync(
     STORAGE_STATE,

@@ -170,16 +170,23 @@ export async function setChargeAmount(
 
 // ── fatura ───────────────────────────────────────────────────────────────────
 
-/** Quanto a fatura soma hoje: compras avulsas mais cobrancas ligadas a ela. */
+/**
+ * Quanto a fatura soma hoje: compras avulsas mais cobrancas ligadas a ela.
+ *
+ * O proprio pagamento fica de fora. Ele e' gravado como `transfer` COM
+ * `statement_id` — e' o que distingue "paguei a fatura" de "transferi entre
+ * contas" —, entao sem o filtro por `source` ele entraria na soma e reabrir e
+ * pagar de novo cobraria o dobro. A mesma exclusao vale em `services/cards`;
+ * as duas somas precisam devolver o mesmo numero, senao a tela promete um valor
+ * e o botao debita outro.
+ */
 export async function statementTotal(ctx: AppContext, statementId: string): Promise<Cents> {
   const { rows } = await db.execute<{ total: string }>(sql`
     select (
-      coalesce((select sum(amount_cents) from transactions
+      coalesce((select sum(case when is_refund then -amount_cents else amount_cents end)
+                  from transactions
                  where statement_id = ${statementId} and user_id = ${ctx.userId}
-                   and not is_refund), 0)
-      - coalesce((select sum(amount_cents) from transactions
-                   where statement_id = ${statementId} and user_id = ${ctx.userId}
-                     and is_refund), 0)
+                   and source <> 'card_payment'), 0)
       + coalesce((select sum(amount_cents) from scheduled_charges
                    where statement_id = ${statementId} and user_id = ${ctx.userId}
                      and status <> 'skipped'), 0)

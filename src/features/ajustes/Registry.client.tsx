@@ -837,7 +837,7 @@ export function Registry({
                       <span className={s.rowSub}>
                         dia {r.dueDay} · {r.kind === "subscription" ? "no cartão" : "em conta"}
                         {r.isVariable ? " · valor variável" : ""}
-                                              </span>
+                      </span>
                     </div>
                     <span className={s.rowValue}>
                       {brl(cents(r.isVariable ? (r.estimatedCents ?? 0) : (r.amountCents ?? 0)))}

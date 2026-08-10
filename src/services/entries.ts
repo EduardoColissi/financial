@@ -122,10 +122,7 @@ export async function createEntry(ctx: AppContext, cmd: CreateEntryCommand): Pro
       throw new EntryError("repeats", "Aporte não repete nem parcela — lance mês a mês.");
     }
     const setor = await db.query.investmentSectors.findFirst({
-      where: and(
-        eq(investmentSectors.id, cmd.sectorId),
-        eq(investmentSectors.userId, ctx.userId)
-      ),
+      where: and(eq(investmentSectors.id, cmd.sectorId), eq(investmentSectors.userId, ctx.userId)),
     });
     if (!setor) throw new EntryError("sectorId", "Setor não encontrado.");
   } else {

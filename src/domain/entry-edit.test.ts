@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canEdit, deleteEffect, editableFields, type EntryLink } from "./entry-edit";
+import { canEdit, deleteEffect, type EntryLink, editableFields } from "./entry-edit";
 
 const SOLTO: EntryLink = { kind: "none" };
 const COBRANCA: EntryLink = { kind: "charge", label: "Aluguel" };
@@ -62,5 +62,4 @@ describe("deleteEffect", () => {
       "A fatura Nubank volta a aberta."
     );
   });
-
 });

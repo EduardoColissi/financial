@@ -48,7 +48,9 @@ async function dependentesDe(
     .select({ id: scheduledCharges.id, nome: recurringRules.name })
     .from(scheduledCharges)
     .innerJoin(recurringRules, eq(recurringRules.id, scheduledCharges.ruleId))
-    .where(and(eq(scheduledCharges.transactionId, row.id), eq(scheduledCharges.userId, ctx.userId)));
+    .where(
+      and(eq(scheduledCharges.transactionId, row.id), eq(scheduledCharges.userId, ctx.userId))
+    );
 
   const primeira = cobrancas[0];
   if (primeira) {
@@ -72,7 +74,9 @@ async function dependentesDe(
     const [dentro] = await db
       .select({ n: sql<number>`count(*)::int` })
       .from(scheduledCharges)
-      .where(and(eq(scheduledCharges.statementId, fatura.id), eq(scheduledCharges.userId, ctx.userId)));
+      .where(
+        and(eq(scheduledCharges.statementId, fatura.id), eq(scheduledCharges.userId, ctx.userId))
+      );
     return {
       link: { kind: "statement", label: fatura.nome, charges: Number(dentro?.n ?? 0) },
       chargeIds: [],
@@ -267,7 +271,9 @@ export async function updateEntry(
       await tx
         .update(scheduledCharges)
         .set({ amountCents: valor, amountOverridden: true, paidOn: cmd.occurredOn })
-        .where(and(eq(scheduledCharges.transactionId, id), eq(scheduledCharges.userId, ctx.userId)));
+        .where(
+          and(eq(scheduledCharges.transactionId, id), eq(scheduledCharges.userId, ctx.userId))
+        );
     }
     if (link.kind === "statement" && faturaId) {
       await tx

@@ -250,8 +250,7 @@ export function Overview({
                     <span className={s.listMain}>
                       <span className={s.listName}>{d.name}</span>
                       <span className={s.listMeta}>
-                        {shortDate(d.dueDate)} · {d.fixed ? "fixa" : "variável"} ·{" "}
-                        {d.categoryName}
+                        {shortDate(d.dueDate)} · {d.fixed ? "fixa" : "variável"} · {d.categoryName}
                       </span>
                     </span>
                     <Money cents={d.amountCents} size="sm" />

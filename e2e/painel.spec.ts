@@ -192,9 +192,7 @@ test("excluir o pagamento de uma conta devolve ela para o aberto", async ({ page
   await aviso.getByRole("button", { name: "Apagar" }).click();
 
   await page.getByRole("link", { name: /^Contas a pagar/ }).click();
-  await expect(page.getByRole("button", { name: "Pagar" })).toHaveCount(
-    abertasDepoisDePagar + 1
-  );
+  await expect(page.getByRole("button", { name: "Pagar" })).toHaveCount(abertasDepoisDePagar + 1);
 });
 
 /**
@@ -274,9 +272,9 @@ test("aporte escolhe setor e soma no acumulado dele", async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/${MES_CORRENTE}/investimentos$`));
 
   // O botao que aportava sozinho saiu: a fatia agora so' sugere.
-  await expect(page.getByRole("button", { name: /Aportar a sobra|Reconfirmar aporte/ })).toHaveCount(
-    0
-  );
+  await expect(
+    page.getByRole("button", { name: /Aportar a sobra|Reconfirmar aporte/ })
+  ).toHaveCount(0);
 
   const setor = page.locator("h3, h2").filter({ hasText: "Reserva de emergência" }).first();
   await expect(setor).toBeVisible();

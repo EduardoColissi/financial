@@ -269,7 +269,9 @@ export function EditEntryModal({
 
         <div className={s.foot}>
           <span className={s.hint}>
-            {centsFromDigits(amount) > 0 ? "as somas do mês recalculam ao salvar" : "informe o valor"}
+            {centsFromDigits(amount) > 0
+              ? "as somas do mês recalculam ao salvar"
+              : "informe o valor"}
           </span>
           <div className={s.actions}>
             <button type="button" className={s.cancel} onClick={close}>

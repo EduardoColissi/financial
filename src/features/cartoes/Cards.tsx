@@ -74,19 +74,15 @@ function CardPanel({ card, hoje }: { card: CardView; hoje: string }) {
               primary
               label="A pagar agora"
               cents={card.toPayCents}
-              hint={`fatura que vence em ${shortDate(card.dueOn)}`}
+              hint={`${shortDate(card.periodStart)} a ${shortDate(card.closingOn)} · vence ${shortDate(card.dueOn)}`}
             />
-            <Figure
-              label="Em formação"
-              cents={card.formingCents}
-              hint={`já lançado no ciclo aberto`}
-            />
+            <Figure label="Em formação" cents={card.formingCents} hint="já caiu nesta fatura" />
             <Figure
               label="Previsto até fechar"
               cents={card.forecastCents}
               hint="assinaturas e parcelas que ainda caem"
             />
-            <Figure label="Estimada" cents={card.estimatedCents} hint="formação + previsto" />
+            <Figure label="Total da fatura" cents={card.totalCents} hint="formação + previsto" />
           </div>
 
           <div className={s.dates}>
@@ -104,7 +100,7 @@ function CardPanel({ card, hoje }: { card: CardView; hoje: string }) {
             </span>
             <span className={s.date}>
               <MicroLabel>Fechamento</MicroLabel>
-              <span className={s.dateValue}>{card.daysToCloseLabel}</span>
+              <span className={s.dateValue}>{card.closingLabel}</span>
             </span>
           </div>
 
@@ -115,7 +111,7 @@ function CardPanel({ card, hoje }: { card: CardView; hoje: string }) {
           */}
           <PayStatement
             statementId={card.statementId}
-            amountCents={card.toPayCents}
+            amountCents={card.totalCents}
             paid={card.paid}
             hoje={hoje}
           />
@@ -127,27 +123,21 @@ function CardPanel({ card, hoje }: { card: CardView; hoje: string }) {
               <Money cents={card.availableCents} size="xs" tone="pos" />
             </span>
           </div>
+          {/*
+            O limite e' do CARTAO, nao do mes: mostra o que ja' foi gasto e
+            nenhuma fatura quitou ainda. Antes a barra somava a fatura do mes
+            navegado com o previsto do ciclo aberto — duas faturas diferentes,
+            e o disponivel mudava conforme o usuario andava no tempo.
+          */}
           <StackedBar
             height={10}
             label={`Uso do limite do ${card.name}`}
             segments={[
               {
-                id: "pagar",
-                label: "a pagar",
-                value: card.toPayCents,
+                id: "uso",
+                label: "em uso",
+                value: card.usedCents,
                 color: card.overUsed ? "var(--neg-bar)" : "var(--pos-soft)",
-              },
-              {
-                id: "form",
-                label: "em formação",
-                value: card.formingCents,
-                color: "var(--info-bar)",
-              },
-              {
-                id: "prev",
-                label: "previsto",
-                value: card.forecastCents,
-                color: "rgba(255,255,255,.22)",
               },
               {
                 id: "livre",

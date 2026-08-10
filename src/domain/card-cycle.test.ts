@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   bestPurchaseDay,
   type CardCycleConfig,
+  closingLabel,
   cycleFor,
   cycleOfRefMonth,
   daysToClose,
-  daysToCloseLabel,
   isInCycle,
+  statementFigures,
   statementPhase,
 } from "./card-cycle";
 import { addDays, plainDate, refMonth } from "./period";
@@ -40,16 +41,36 @@ describe("melhor dia de compra", () => {
 });
 
 describe("dias para fechar", () => {
+  /** O ciclo aberto e' aquele em que uma compra de hoje cairia. */
+  const aberto = (config: CardCycleConfig, today: ReturnType<typeof d>) => cycleFor(config, today);
+
   it("reproduz os tres cartoes do design em 01/08/2026", () => {
-    expect(daysToClose(NUBANK, HOJE)).toBe(27);
-    expect(daysToClose(ITAU, HOJE)).toBe(1);
-    expect(daysToClose(INTER, HOJE)).toBe(19);
+    expect(daysToClose(aberto(NUBANK, HOJE), HOJE)).toBe(27);
+    expect(daysToClose(aberto(ITAU, HOJE), HOJE)).toBe(1);
+    expect(daysToClose(aberto(INTER, HOJE), HOJE)).toBe(19);
   });
 
   it("usa os rotulos do design", () => {
-    expect(daysToCloseLabel(NUBANK, HOJE)).toBe("27 dias para fechar");
-    expect(daysToCloseLabel(ITAU, HOJE)).toBe("fecha amanhã");
-    expect(daysToCloseLabel(INTER, d("2026-08-20"))).toBe("fecha hoje");
+    expect(closingLabel(aberto(NUBANK, HOJE), HOJE)).toBe("27 dias para fechar");
+    expect(closingLabel(aberto(ITAU, HOJE), HOJE)).toBe("fecha amanhã");
+    const vinte = d("2026-08-20");
+    expect(closingLabel(aberto(INTER, vinte), vinte)).toBe("fecha hoje");
+  });
+
+  /**
+   * O ciclo do mes exibido pode ja' ter fechado — e' o caso da fatura de agosto
+   * vista em 08/08 num cartao que fecha dia 05. Antes o rotulo respondia pelo
+   * proximo fechamento e anunciava "28 dias para fechar" numa fatura fechada.
+   */
+  it("diz que fechou quando o ciclo exibido ja' passou", () => {
+    const fecha05: CardCycleConfig = { closingDay: 5, dueDay: 12 };
+    const agosto = cycleOfRefMonth(fecha05, m("2026-08"));
+    expect(agosto.periodEnd).toBe("2026-08-05");
+    expect(closingLabel(agosto, d("2026-08-08"))).toBe("fechou em 05/08");
+    // A fatura de setembro, vista do mesmo dia, ainda esta' acumulando.
+    expect(closingLabel(cycleOfRefMonth(fecha05, m("2026-09")), d("2026-08-08"))).toBe(
+      "28 dias para fechar"
+    );
   });
 
   /**
@@ -60,21 +81,22 @@ describe("dias para fechar", () => {
 
   it("DIVERGE da formula do design em mes de 30 dias, depois do fechamento", () => {
     // 29/04: o proximo fechamento e' 28/05, ou seja, 29 dias.
-    const correto = daysToClose(NUBANK, d("2026-04-29"));
-    expect(correto).toBe(29);
+    const hoje = d("2026-04-29");
+    expect(daysToClose(aberto(NUBANK, hoje), hoje)).toBe(29);
     expect(designFormula(28, 29)).toBe(30); // o design erraria por 1 dia
   });
 
   it("DIVERGE da formula do design quando o fechamento cai em fevereiro", () => {
     // Cartao que fecha dia 31: em fevereiro o fechamento e' 28.
     const fechaNo31: CardCycleConfig = { closingDay: 31, dueDay: 10 };
-    const correto = daysToClose(fechaNo31, d("2026-02-01"));
-    expect(correto).toBe(27);
+    const hoje = d("2026-02-01");
+    expect(daysToClose(aberto(fechaNo31, hoje), hoje)).toBe(27);
     expect(designFormula(31, 1)).toBe(30); // o design erraria por 3 dias
   });
 
   it("zero no proprio dia do fechamento", () => {
-    expect(daysToClose(NUBANK, d("2026-08-28"))).toBe(0);
+    const fechamento = d("2026-08-28");
+    expect(daysToClose(aberto(NUBANK, fechamento), fechamento)).toBe(0);
   });
 });
 
@@ -155,6 +177,69 @@ describe("ciclo a partir do mes de referencia", () => {
     const ciclo = cycleOfRefMonth(ITAU, m("2026-08"));
     expect(ciclo.periodEnd).toBe("2026-08-02");
     expect(ciclo.dueDate).toBe("2026-08-10");
+  });
+});
+
+describe("os quatro numeros do painel", () => {
+  /**
+   * O cartao do caso real: fecha dia 05, vence dia 12. Duas assinaturas em
+   * agosto — uma cobrada dia 6 (R$ 381,10) e outra dia 15 (R$ 34,90) —, vistas
+   * em 08/08. As duas caem depois do fechamento, entao as duas pertencem a'
+   * fatura de SETEMBRO.
+   */
+  const CROMA: CardCycleConfig = { closingDay: 5, dueDay: 12 };
+  const HOJE_08 = d("2026-08-08");
+
+  const fatura = (mes: string) => cycleOfRefMonth(CROMA, m(mes));
+  const fase = (mes: string, paid = false) => statementPhase(fatura(mes), HOJE_08, paid);
+
+  it("a fatura de agosto ja' fechou e nao recebe mais nada", () => {
+    expect(fatura("2026-08").periodEnd).toBe("2026-08-05");
+    expect(fase("2026-08")).toBe("fechada");
+
+    // Nenhuma das duas assinaturas cai aqui: 06/08 e 15/08 sao posteriores ao
+    // fechamento. A tela chegou a listar a do dia 15 como "ainda vai cair"
+    // nesta fatura, tres dias depois de ela ter fechado.
+    const f = statementFigures({ postedCents: 0, futureCents: 0 }, fase("2026-08"));
+    expect(f).toEqual({ toPayCents: 0, formingCents: 0, forecastCents: 0, totalCents: 0 });
+  });
+
+  it("a de setembro esta' aberta e mostra as duas assinaturas", () => {
+    const setembro = fatura("2026-09");
+    expect(setembro.periodStart).toBe("2026-08-06");
+    expect(setembro.periodEnd).toBe("2026-09-05");
+    expect(fase("2026-09")).toBe("aberta");
+
+    // WellHub (06/08) ja' caiu; Paramount+ (15/08) ainda vai cair.
+    const f = statementFigures({ postedCents: 38110, futureCents: 3490 }, fase("2026-09"));
+    expect(f.formingCents).toBe(38110);
+    expect(f.forecastCents).toBe(3490);
+    expect(f.totalCents).toBe(41600);
+    // Aberta nao e' divida: so' se paga o que fechou.
+    expect(f.toPayCents).toBe(0);
+  });
+
+  it("o que estava em formacao vira a pagar quando o ciclo fecha", () => {
+    const depois = statementFigures(
+      { postedCents: 41600, futureCents: 0 },
+      statementPhase(fatura("2026-09"), d("2026-09-06"), false)
+    );
+    expect(depois.toPayCents).toBe(41600);
+    expect(depois.formingCents).toBe(0);
+    expect(depois.forecastCents).toBe(0);
+    expect(depois.totalCents).toBe(41600);
+  });
+
+  it("fatura paga nao cobra de novo, mas continua somando o que teve", () => {
+    const f = statementFigures({ postedCents: 41600, futureCents: 0 }, fase("2026-09", true));
+    expect(f.toPayCents).toBe(0);
+    expect(f.totalCents).toBe(41600);
+  });
+
+  it("estorno derruba o total da fatura", () => {
+    // O estorno chega como valor negativo em `postedCents`.
+    const f = statementFigures({ postedCents: 38110 - 3490, futureCents: 0 }, fase("2026-09"));
+    expect(f.totalCents).toBe(34620);
   });
 });
 

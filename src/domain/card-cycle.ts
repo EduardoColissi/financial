@@ -6,6 +6,7 @@ import {
   monthOf,
   type PlainDate,
   type RefMonth,
+  shortDate,
 } from "./period";
 
 /**
@@ -91,23 +92,28 @@ export function cycleOfRefMonth(config: CardCycleConfig, ref: RefMonth): CardCyc
 }
 
 /**
- * Quantos dias faltam para a fatura fechar.
+ * Quantos dias faltam para ESTE ciclo fechar. Negativo se ja' fechou.
  *
  * Substitui `(fecha - hoje + 31) % 31` do design (linha 1330), que acerta por
  * coincidencia em agosto de 2026 e erra em meses de 30 ou 28 dias — e tambem
  * quando o dia de fechamento ja' passou.
  */
-export function daysToClose(config: CardCycleConfig, today: PlainDate): number {
-  const thisMonthClosing = closingIn(monthOf(today), config.closingDay);
-  const nextClosing =
-    today <= thisMonthClosing
-      ? thisMonthClosing
-      : closingIn(addMonths(monthOf(today), 1), config.closingDay);
-  return daysBetween(today, nextClosing);
+export function daysToClose(cycle: CardCycle, today: PlainDate): number {
+  return daysBetween(today, cycle.periodEnd);
 }
 
-export function daysToCloseLabel(config: CardCycleConfig, today: PlainDate): string {
-  const days = daysToClose(config, today);
+/**
+ * Como descrever o fechamento deste ciclo, visto de `today`.
+ *
+ * Fala de um ciclo CONCRETO, nao do proximo fechamento do cartao. A versao
+ * anterior recebia a configuracao do cartao e respondia sempre pelo ciclo
+ * aberto, entao a tela de agosto anunciava "28 dias para fechar" para uma
+ * fatura que fechara tres dias antes: o rotulo era do ciclo de setembro, ao
+ * lado de numeros da fatura de agosto.
+ */
+export function closingLabel(cycle: CardCycle, today: PlainDate): string {
+  const days = daysToClose(cycle, today);
+  if (days < 0) return `fechou em ${shortDate(cycle.periodEnd)}`;
   if (days === 0) return "fecha hoje";
   if (days === 1) return "fecha amanhã";
   return `${days} dias para fechar`;
@@ -141,4 +147,40 @@ export type StatementPhase = "paga" | "fechada" | "aberta";
 export function statementPhase(cycle: CardCycle, today: PlainDate, paid: boolean): StatementPhase {
   if (paid) return "paga";
   return today > cycle.periodEnd ? "fechada" : "aberta";
+}
+
+/** A fatura partida em duas: o que ja' caiu nela e o que ainda vai cair. */
+export interface StatementSplit {
+  postedCents: number;
+  futureCents: number;
+}
+
+/** Os quatro numeros do painel do cartao. */
+export interface StatementFigures {
+  toPayCents: number;
+  formingCents: number;
+  forecastCents: number;
+  totalCents: number;
+}
+
+/**
+ * Os quatro numeros, todos da MESMA fatura, decididos pela fase dela.
+ *
+ * Sao excludentes de proposito: enquanto o ciclo corre, o valor mora em
+ * "formacao" e "previsto" e nada e' devido — a fatura ainda esta' recebendo
+ * compras. Quando ela fecha, os dois viram "a pagar" e param de existir: nao ha'
+ * o que se formar numa fatura fechada.
+ *
+ * Antes cada numero respondia por um calendario diferente — "a pagar" pela
+ * fatura do mes na tela, "formacao" e "previsto" pelo ciclo aberto de hoje —, e
+ * navegar de agosto para setembro repetia os mesmos dois valores nos dois meses.
+ */
+export function statementFigures(split: StatementSplit, phase: StatementPhase): StatementFigures {
+  const total = split.postedCents + split.futureCents;
+  return {
+    toPayCents: phase === "fechada" ? total : 0,
+    formingCents: phase === "aberta" ? split.postedCents : 0,
+    forecastCents: phase === "aberta" ? split.futureCents : 0,
+    totalCents: total,
+  };
 }

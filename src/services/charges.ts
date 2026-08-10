@@ -4,6 +4,8 @@ import { db } from "@/db/client";
 import { remainingIncludingCurrent } from "@/domain/installments";
 import { type Cents, cents } from "@/domain/money";
 import {
+  addDays,
+  daysBetween,
   daysInMonth,
   firstDayOf,
   firstWeekdayOf,
@@ -22,6 +24,13 @@ import { ensureMonthMaterialized } from "./materialize";
  * As duas leem a MESMA entidade. O que as separa e' o canal de pagamento
  * (conta/boleto x cartao), nao "fixa x parcelada" como o design sugere ao ter
  * duas listas independentes.
+ *
+ * E' tambem o que faz cada aba recortar o mes de um jeito. Uma conta em boleto
+ * e' paga no dia em que vence, entao o mes dela e' o mes do vencimento. Uma
+ * assinatura no cartao nao: ela e' cobrada num dia e paga junto com a fatura,
+ * que pode vencer no mes seguinte. Num cartao que fecha dia 05, a cobranca do
+ * dia 15 de agosto so' sai do bolso em setembro — e e' em setembro que ela
+ * precisa aparecer, ao lado das outras que serao pagas no mesmo cheque.
  */
 
 export interface ChargeRow {
@@ -65,16 +74,38 @@ export interface SubscriptionsResult {
   forecastCents: Cents;
   remainingCents: Cents;
   next: ChargeRow | null;
+  /** O periodo faturado, dia a dia — nao o mes civil. Ver `buildTimeline`. */
   timeline: Array<{
+    key: string;
     day: number;
+    label: string;
     today: boolean;
     marks: Array<{ id: string; color: string; posted: boolean }>;
   }>;
 }
 
-async function loadCharges(ctx: AppContext, month: RefMonth): Promise<ChargeRow[]> {
+/**
+ * Que recorte de mes a aba usa.
+ *
+ * `bill` = a cobranca vence neste mes. `statement` = a cobranca cai na fatura
+ * que vence neste mes, que e' quando o dinheiro sai.
+ */
+type ChargeScope = "bill" | "statement";
+
+async function loadCharges(
+  ctx: AppContext,
+  month: RefMonth,
+  scope: ChargeScope
+): Promise<ChargeRow[]> {
+  // Materializar antes tambem religa cobranca que tenha ficado sem fatura, e e'
+  // o que garante que o recorte por fatura nao esconda nada.
   await ensureMonthMaterialized(ctx, month);
   const ref = firstDayOf(month);
+
+  const escopo =
+    scope === "bill"
+      ? sql`rr.card_id is null and sc.ref_month = ${ref}`
+      : sql`st.ref_month = ${ref}`;
 
   const { rows } = await db.execute<{
     id: string;
@@ -82,7 +113,7 @@ async function loadCharges(ctx: AppContext, month: RefMonth): Promise<ChargeRow[
     due_date: string;
     amount_cents: string;
     status: string;
-      is_variable: boolean;
+    is_variable: boolean;
     card_id: string | null;
     sequence: number | null;
     total: number | null;
@@ -101,7 +132,8 @@ async function loadCharges(ctx: AppContext, month: RefMonth): Promise<ChargeRow[
       join categories cat on cat.id = rr.category_id
       left join credit_cards cc on cc.id = rr.card_id
       left join accounts ac on ac.id = rr.account_id
-     where sc.user_id = ${ctx.userId} and sc.ref_month = ${ref}
+      left join card_statements st on st.id = sc.statement_id
+     where sc.user_id = ${ctx.userId} and ${escopo}
      order by sc.due_date, rr.name
   `);
 
@@ -143,7 +175,7 @@ export async function getBills(
   month: RefMonth,
   filter: "todas" | "fixas" | "variaveis" = "todas"
 ): Promise<BillsResult> {
-  const all = (await loadCharges(ctx, month)).filter((c) => !c.onCredit);
+  const all = await loadCharges(ctx, month, "bill");
 
   const visible = all.filter((c) =>
     filter === "todas" ? true : filter === "fixas" ? c.fixed : !c.fixed
@@ -185,15 +217,61 @@ export async function getBills(
   };
 }
 
-/** Aba "Assinaturas e parcelas": o que cai na fatura do cartao. */
+const isInstallment = (c: ChargeRow) => c.total != null;
+
+/**
+ * A faixa de dias que a fatura cobre, do primeiro ao ultimo dia com cobranca.
+ *
+ * Nao e' o mes civil. Um ciclo que fecha dia 05 comeca no dia 06 do mes
+ * anterior, entao a fatura de setembro e' cobrada entre 06/08 e 05/09 — e
+ * cartoes com fechamentos diferentes deslocam esse periodo cada um para um
+ * lado. Desenhar isso sobre um calendario de 1 a 30 punha a cobranca do dia
+ * 06/08 na casa "6" de setembro, um mes inteiro fora do lugar.
+ *
+ * Deriva o intervalo das proprias cobrancas em vez de pedir os periodos aos
+ * cartoes: a aba junta varios cartoes, e o unico intervalo que cabe todos e'
+ * aquele que vai da primeira cobranca a' ultima.
+ */
+function buildTimeline(charges: readonly ChargeRow[], today: PlainDate) {
+  const dates = charges.map((c) => c.dueDate).sort();
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  if (!first || !last) return [];
+
+  return Array.from({ length: daysBetween(first, last) + 1 }, (_, i) => {
+    const date = addDays(first, i);
+    const parts = partsOfDate(date);
+    return {
+      key: date,
+      day: parts.day,
+      label: `${String(parts.day).padStart(2, "0")}/${String(parts.month).padStart(2, "0")}`,
+      today: date === today,
+      marks: charges
+        .filter((c) => c.dueDate === date)
+        .map((c) => ({
+          id: c.id,
+          color: isInstallment(c) ? "var(--info-bar)" : c.categoryColor,
+          posted: c.phase !== "prevista",
+        })),
+    };
+  });
+}
+
+/**
+ * Aba "Assinaturas e parcelas": o que cai na fatura que vence neste mes.
+ *
+ * Recorte por FATURA, nao pelo mes em que a assinatura e' cobrada. As duas
+ * coisas divergem em todo cartao — a cobranca posterior ao fechamento pertence
+ * a' fatura seguinte —, e listar pelo mes de cobranca mostrava lado a lado
+ * despesas que sairiam do bolso em meses diferentes.
+ */
 export async function getSubscriptions(
   ctx: AppContext,
   month: RefMonth,
   filter: "todos" | "assinaturas" | "parcelas" = "todos"
 ): Promise<SubscriptionsResult> {
-  const all = (await loadCharges(ctx, month)).filter((c) => c.onCredit);
+  const all = await loadCharges(ctx, month, "statement");
 
-  const isInstallment = (c: ChargeRow) => c.total != null;
   const visible = all.filter((c) =>
     filter === "todos" ? true : filter === "assinaturas" ? !isInstallment(c) : isInstallment(c)
   );
@@ -201,20 +279,6 @@ export async function getSubscriptions(
   const sum = (list: ChargeRow[]) => cents(list.reduce<number>((a, c) => a + c.amountCents, 0));
   const posted = all.filter((c) => c.phase === "na fatura" || c.paid);
   const forecast = all.filter((c) => c.phase === "prevista");
-
-  const timeline = Array.from({ length: daysInMonth(month) }, (_, i) => {
-    const day = i + 1;
-    const onDay = all.filter((c) => c.day === day);
-    return {
-      day,
-      today: ctx.today.slice(0, 7) === month && partsOfDate(ctx.today).day === day,
-      marks: onDay.map((c) => ({
-        id: c.id,
-        color: isInstallment(c) ? "var(--info-bar)" : c.categoryColor,
-        posted: c.phase !== "prevista",
-      })),
-    };
-  });
 
   return {
     rows: visible,
@@ -226,6 +290,6 @@ export async function getSubscriptions(
       all.filter(isInstallment).reduce<number>((a, c) => a + (c.remainingCents ?? 0), 0)
     ),
     next: forecast[0] ?? null,
-    timeline,
+    timeline: buildTimeline(all, ctx.today),
   };
 }

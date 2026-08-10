@@ -74,8 +74,14 @@ async function flowsFrom(ctx: AppContext, primeiro: RefMonth, ultimo: RefMonth) 
              and sc.status = 'pending' and sc.statement_id is null)
        + (select coalesce(sum(
              coalesce(st.closed_total_cents,
-               (select coalesce(sum(t2.amount_cents),0) from transactions t2
-                 where t2.statement_id = st.id and not t2.is_refund)
+               -- Mesma conta de payments.statementTotal e da aba Cartoes: o
+               -- estorno ABATE em vez de ser ignorado, e o lancamento do
+               -- proprio pagamento nao entra. Somar so' os nao-estorno inflava
+               -- a fatura pendente pelo valor de tudo que foi devolvido.
+               (select coalesce(sum(
+                   case when t2.is_refund then -t2.amount_cents else t2.amount_cents end), 0)
+                  from transactions t2
+                 where t2.statement_id = st.id and t2.source <> 'card_payment')
                + (select coalesce(sum(sc2.amount_cents),0) from scheduled_charges sc2
                    where sc2.statement_id = st.id and sc2.status <> 'skipped'))
            ), 0) from card_statements st

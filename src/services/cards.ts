@@ -4,9 +4,10 @@ import { db } from "@/db/client";
 import { cardStatements, creditCards } from "@/db/schema";
 import {
   bestPurchaseDay,
+  closingLabel,
   cycleOfRefMonth,
-  daysToCloseLabel,
   type StatementPhase,
+  statementFigures,
   statementPhase,
 } from "@/domain/card-cycle";
 import { type Cents, cents } from "@/domain/money";
@@ -21,11 +22,19 @@ import { ensureMonthMaterialized } from "./materialize";
  * previsoes do ciclo SEGUINTE (`est = fechado + prev`, linha 1315). Sao numeros
  * de periodos diferentes; somados nao significam nada.
  *
- * Por decisao do usuario, aqui viram quatro numeros com semantica propria:
- *   - a pagar agora  : a fatura que fechou e vence neste mes
- *   - em formacao    : o que ja' caiu no ciclo aberto
- *   - previsto       : o que ainda vai cair ate' o fechamento
- *   - estimada       : formacao + previsto (o que a proxima fatura deve dar)
+ * Por decisao do usuario, aqui viram quatro numeros com semantica propria —
+ * todos da MESMA fatura, a que vence no mes exibido:
+ *   - a pagar agora  : o total dela, quando ja' fechou e nao foi paga
+ *   - em formacao    : o que ja' caiu nela, enquanto o ciclo esta' aberto
+ *   - previsto       : o que ainda vai cair ate' ela fechar
+ *   - total          : formacao + previsto (o que esta fatura deve dar)
+ *
+ * "Da mesma fatura" e' a correcao central. Antes cada numero respondia por um
+ * calendario diferente: `a pagar` olhava a fatura do mes, `formacao` e
+ * `previsto` olhavam o ciclo aberto de HOJE (os mesmos valores em qualquer mes
+ * que se navegasse), e as listas laterais olhavam o `ref_month` da cobranca,
+ * ignorando a fatura em que ela cai. Num cartao que fecha dia 05, a assinatura
+ * do dia 15 aparecia como "ainda vai cair" numa fatura fechada no dia 05.
  */
 
 export interface InstallmentRow {
@@ -55,7 +64,10 @@ export interface CardView {
   toPayCents: Cents;
   formingCents: Cents;
   forecastCents: Cents;
-  estimatedCents: Cents;
+  /** Tudo que esta fatura soma — e' o valor que o botao "Pagar fatura" propoe. */
+  totalCents: Cents;
+  /** Gasto e ainda nao pago, em qualquer fatura aberta. Nao depende do mes. */
+  usedCents: Cents;
   availableCents: Cents;
   usagePercent: number;
   overUsed: boolean;
@@ -63,9 +75,10 @@ export interface CardView {
   closingDay: number;
   dueDay: number;
   bestDay: number;
+  periodStart: PlainDate;
   closingOn: PlainDate;
   dueOn: PlainDate;
-  daysToCloseLabel: string;
+  closingLabel: string;
   phase: StatementPhase;
   paid: boolean;
   statementId: string | null;
@@ -99,44 +112,68 @@ export async function getCards(ctx: AppContext, month: RefMonth): Promise<CardsR
 
   const stByCard = new Map(statements.map((st) => [st.cardId, st]));
 
-  // Uma query por cartao seria N+1; aqui tudo vem de uma vez e agrupa em memoria.
+  /*
+   * Uma query por cartao seria N+1; aqui tudo vem de uma vez e agrupa em
+   * memoria.
+   *
+   * `item` unifica as duas coisas que compoem uma fatura — compras avulsas e
+   * cobrancas de regra — numa lista so' de (fatura, data, valor). Sem isso cada
+   * numero precisaria de duas somas paralelas, e foi assim que "em formacao"
+   * acabou contando apenas as compras: a assinatura que ja' tinha caido no
+   * ciclo nao entrava em soma nenhuma e sumia da tela.
+   *
+   * O pagamento da propria fatura fica de fora: `payStatement` grava um
+   * `transfer` COM `statement_id`, que somado de volta dobraria o valor da
+   * fatura depois de paga.
+   */
   const agg = await db.execute<{
     card_id: string;
-    to_pay: string;
-    forming: string;
-    forecast: string;
+    posted: string;
+    future: string;
+    used: string;
   }>(sql`
-    with st as (
-      select id, card_id, period_start, period_end
-        from card_statements
-       where user_id = ${ctx.userId} and ref_month = ${ref}
-    ),
-    nextst as (
-      -- O ciclo que ainda esta' aberto: o que fecha depois de hoje.
-      select distinct on (card_id) id, card_id, period_start, period_end
-        from card_statements
-       where user_id = ${ctx.userId} and period_end >= ${ctx.today}
-       order by card_id, period_end asc
+    with item as (
+      select t.statement_id,
+             t.occurred_on as on_date,
+             case when t.is_refund then -t.amount_cents else t.amount_cents end as cents
+        from transactions t
+       where t.user_id = ${ctx.userId}
+         and t.statement_id is not null
+         and t.source <> 'card_payment'
+      union all
+      select sc.statement_id, sc.due_date as on_date, sc.amount_cents as cents
+        from scheduled_charges sc
+       where sc.user_id = ${ctx.userId}
+         and sc.statement_id is not null
+         and sc.status <> 'skipped'
     )
     select c.id as card_id,
-           coalesce((select sum(t.amount_cents) from transactions t
-                      where t.user_id = ${ctx.userId}
-                        and t.statement_id = (select id from st where st.card_id = c.id)), 0)::text as to_pay,
-           coalesce((select sum(t.amount_cents) from transactions t
-                      join nextst n on n.id = t.statement_id
-                     where t.user_id = ${ctx.userId} and n.card_id = c.id
-                       and t.occurred_on <= ${ctx.today}), 0)::text as forming,
-           coalesce((select sum(sc.amount_cents) from scheduled_charges sc
-                      join nextst n on n.id = sc.statement_id
-                     where sc.user_id = ${ctx.userId} and n.card_id = c.id
-                       and sc.due_date > ${ctx.today}), 0)::text as forecast
+           coalesce(sum(i.cents) filter (
+             where s.ref_month = ${ref} and i.on_date <= ${ctx.today}), 0)::text as posted,
+           coalesce(sum(i.cents) filter (
+             where s.ref_month = ${ref} and i.on_date > ${ctx.today}), 0)::text as future,
+           -- Limite comprometido: o que ja' foi gasto e a fatura ainda nao
+           -- quitou. E' propriedade do cartao HOJE, nao do mes na tela — o
+           -- disponivel nao pode mudar porque o usuario navegou para outro mes.
+           coalesce(sum(i.cents) filter (
+             where s.status <> 'paid' and i.on_date <= ${ctx.today}), 0)::text as used
       from credit_cards c
+      left join card_statements s on s.card_id = c.id and s.user_id = ${ctx.userId}
+      left join item i on i.statement_id = s.id
      where c.user_id = ${ctx.userId}
+     group by c.id
   `);
 
   const aggByCard = new Map(agg.rows.map((r) => [r.card_id, r]));
 
-  // Parcelamentos em curso e recorrentes ainda por cair, por cartao.
+  /*
+   * As duas listas laterais seguem a FATURA, nunca o `ref_month` da cobranca.
+   *
+   * Sao eixos diferentes: `sc.ref_month` e' o mes em que a assinatura e'
+   * cobrada no cartao, e `st.ref_month` e' o mes em que a fatura vence. Num
+   * cartao que fecha dia 05 eles so' coincidem para cobranca dos dias 1 a 5;
+   * do dia 6 em diante a cobranca de agosto pertence a' fatura de setembro.
+   */
   const inst = await db.execute<{
     card_id: string;
     id: string;
@@ -145,12 +182,13 @@ export async function getCards(ctx: AppContext, month: RefMonth): Promise<CardsR
     total: number;
     amount_cents: string;
   }>(sql`
-    select rr.card_id, sc.id, rr.name, sc.sequence, rr.installments_total as total,
+    select st.card_id, sc.id, rr.name, sc.sequence, rr.installments_total as total,
            sc.amount_cents::text
       from scheduled_charges sc
       join recurring_rules rr on rr.id = sc.rule_id
-     where sc.user_id = ${ctx.userId} and sc.ref_month = ${ref}
-       and rr.card_id is not null and rr.installments_total is not null
+      join card_statements st on st.id = sc.statement_id
+     where sc.user_id = ${ctx.userId} and st.ref_month = ${ref}
+       and sc.status <> 'skipped' and rr.installments_total is not null
      order by rr.name
   `);
 
@@ -162,13 +200,14 @@ export async function getCards(ctx: AppContext, month: RefMonth): Promise<CardsR
     amount_cents: string;
     color: string;
   }>(sql`
-    select rr.card_id, sc.id, rr.name, to_char(sc.due_date,'YYYY-MM-DD') as due_date,
+    select st.card_id, sc.id, rr.name, to_char(sc.due_date,'YYYY-MM-DD') as due_date,
            sc.amount_cents::text, cat.color
       from scheduled_charges sc
       join recurring_rules rr on rr.id = sc.rule_id
       join categories cat on cat.id = rr.category_id
-     where sc.user_id = ${ctx.userId} and sc.ref_month = ${ref}
-       and rr.card_id is not null and sc.due_date > ${ctx.today}
+      join card_statements st on st.id = sc.statement_id
+     where sc.user_id = ${ctx.userId} and st.ref_month = ${ref}
+       and sc.status <> 'skipped' and sc.due_date > ${ctx.today}
      order by sc.due_date
   `);
 
@@ -183,10 +222,12 @@ export async function getCards(ctx: AppContext, month: RefMonth): Promise<CardsR
     const a = aggByCard.get(card.id);
     const paid = st?.status === "paid";
 
-    const toPay = Number(a?.to_pay ?? 0);
-    const forming = Number(a?.forming ?? 0);
-    const forecast = Number(a?.forecast ?? 0);
-    const estimated = forming + forecast;
+    const phase = statementPhase(cycle, ctx.today, paid);
+    const figures = statementFigures(
+      { postedCents: Number(a?.posted ?? 0), futureCents: Number(a?.future ?? 0) },
+      phase
+    );
+    const used = Number(a?.used ?? 0);
 
     const cardInst = inst.rows
       .filter((r) => r.card_id === card.id)
@@ -198,9 +239,6 @@ export async function getCards(ctx: AppContext, month: RefMonth): Promise<CardsR
         amountCents: cents(Number(r.amount_cents)),
       }));
 
-    // Comprometido do limite = o que precisa pagar + o que ja' esta' rodando.
-    const committed = toPay + estimated;
-
     return {
       id: card.id,
       name: card.name,
@@ -209,21 +247,23 @@ export async function getCards(ctx: AppContext, month: RefMonth): Promise<CardsR
       color: card.color,
       limitCents: cents(card.limitCents),
 
-      toPayCents: cents(toPay),
-      formingCents: cents(forming),
-      forecastCents: cents(forecast),
-      estimatedCents: cents(estimated),
-      availableCents: cents(Math.max(0, card.limitCents - committed)),
-      usagePercent: card.limitCents > 0 ? (committed / card.limitCents) * 100 : 0,
-      overUsed: card.limitCents > 0 && committed / card.limitCents > 0.7,
+      toPayCents: cents(figures.toPayCents),
+      formingCents: cents(figures.formingCents),
+      forecastCents: cents(figures.forecastCents),
+      totalCents: cents(figures.totalCents),
+      usedCents: cents(Math.max(0, used)),
+      availableCents: cents(Math.max(0, card.limitCents - used)),
+      usagePercent: card.limitCents > 0 ? (used / card.limitCents) * 100 : 0,
+      overUsed: card.limitCents > 0 && used / card.limitCents > 0.7,
 
       closingDay: card.closingDay,
       dueDay: card.dueDay,
       bestDay: bestPurchaseDay(config),
+      periodStart: cycle.periodStart,
       closingOn: cycle.periodEnd,
       dueOn: cycle.dueDate,
-      daysToCloseLabel: daysToCloseLabel(config, ctx.today),
-      phase: statementPhase(cycle, ctx.today, paid),
+      closingLabel: closingLabel(cycle, ctx.today),
+      phase,
       paid,
       statementId: st?.id ?? null,
 
@@ -245,7 +285,10 @@ export async function getCards(ctx: AppContext, month: RefMonth): Promise<CardsR
     };
   });
 
-  const open = views.filter((c) => !c.paid);
+  // "Em aberto" e' a fatura que fechou, tem valor e ninguem pagou. Contar
+  // tambem as que ainda estao acumulando faria o aviso do topo anunciar faturas
+  // a pagar que nao vencem neste mes — e somar R$ 0,00 delas.
+  const open = views.filter((c) => c.phase === "fechada" && c.toPayCents > 0);
   return {
     cards: views,
     openCount: open.length,

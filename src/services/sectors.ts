@@ -7,8 +7,8 @@ import { type Cents, cents } from "@/domain/money";
 import { firstDayOf, type PlainDate, plainDate, type RefMonth } from "@/domain/period";
 import { RegistryError } from "@/domain/registry";
 import {
-  allocate,
   type AnnualProgress,
+  allocate,
   annualProgress,
   type SectorProgress,
   sectorProgress,
@@ -153,7 +153,8 @@ export const getSectors = cache(async (ctx: AppContext, month: RefMonth): Promis
   });
 
   const totalShare = linhas.reduce<number>((a, l) => a + l.sharePercent, 0);
-  const soma = (f: (s: SectorView) => number) => cents(sectors.reduce<number>((a, s) => a + f(s), 0));
+  const soma = (f: (s: SectorView) => number) =>
+    cents(sectors.reduce<number>((a, s) => a + f(s), 0));
 
   return {
     sectors,

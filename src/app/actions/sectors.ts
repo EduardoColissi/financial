@@ -50,7 +50,8 @@ function parseForm(formData: FormData): SectorDraft {
     try {
       valor = parseBRL(bruto);
     } catch (e) {
-      if (e instanceof MoneyError) throw new RegistryError(campo, `${rotulo} não é um valor válido.`);
+      if (e instanceof MoneyError)
+        throw new RegistryError(campo, `${rotulo} não é um valor válido.`);
       throw e;
     }
     if (valor < 0) throw new RegistryError(campo, `${rotulo} não pode ser negativa.`);

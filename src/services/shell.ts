@@ -41,15 +41,21 @@ export const getShellData = cache(async (ctx: AppContext, month: RefMonth): Prom
         where sc.user_id = ${ctx.userId} and sc.ref_month = ${ref}
           and sc.status = 'pending' and rr.card_id is null)::text as open_bills,
 
-      -- Assinaturas que ainda vao cair na fatura (due_date > hoje).
+      -- Assinaturas que ainda vao cair na fatura que vence neste mes. Segue a
+      -- FATURA, como a aba: o mes em que a assinatura e' cobrada e o mes em que
+      -- ela e' paga sao coisas diferentes em todo cartao.
       (select count(*) from scheduled_charges sc
-         join recurring_rules rr on rr.id = sc.rule_id
-        where sc.user_id = ${ctx.userId} and sc.ref_month = ${ref}
-          and sc.status = 'pending' and rr.card_id is not null
+         join card_statements st on st.id = sc.statement_id
+        where sc.user_id = ${ctx.userId} and st.ref_month = ${ref}
+          and sc.status = 'pending'
           and sc.due_date > ${ctx.today})::text as upcoming,
 
+      -- Fatura "em aberto" e' a que ja' fechou e ninguem pagou. A que ainda
+      -- acumula compras nao e' divida: contar as duas fazia o badge divergir do
+      -- aviso da propria aba Cartoes.
       (select count(*) from card_statements
-        where user_id = ${ctx.userId} and ref_month = ${ref} and status <> 'paid')::text as open_statements,
+        where user_id = ${ctx.userId} and ref_month = ${ref}
+          and status <> 'paid' and period_end < ${ctx.today})::text as open_statements,
       (select count(*) from card_statements
         where user_id = ${ctx.userId} and ref_month = ${ref})::text as statements,
 

@@ -209,6 +209,7 @@ function CardForm({
   const [state, formAction, pending] = useActionState(saveCardAction, INICIAL);
   const uid = useId();
   const listaTitulares = `${uid}-titulares-cartao`;
+  const limiteId = `${uid}-limite`;
 
   // Previa do prazo. Fechamento e vencimento trocados dao um numero absurdo, e
   // ver isso na hora evita meses de fatura no lugar errado.
@@ -314,9 +315,14 @@ function CardForm({
           <Erro state={state} campo="dueDay" />
         </label>
 
-        <label className={s.field}>
+        <label className={s.field} htmlFor={limiteId}>
           <span className={s.label}>Limite</span>
-          <MoneyInput name="limit" className={s.input} defaultCents={cartao?.limitCents} />
+          <MoneyInput
+            id={limiteId}
+            name="limit"
+            className={s.input}
+            defaultCents={cartao?.limitCents}
+          />
           <Erro state={state} campo="limit" />
         </label>
 
@@ -367,6 +373,7 @@ function CategoryForm({
 }) {
   const [state, formAction, pending] = useActionState(saveCategoryAction, INICIAL);
   const [kind, setKind] = useState<CategoryKind>(categoria?.kind ?? tipoInicial);
+  const orcamentoId = `${useId()}-orcamento`;
 
   useEffect(() => {
     if (state.ok) onDone();
@@ -409,9 +416,10 @@ function CategoryForm({
 
         {/* Orçamento só faz sentido em gasto: orçar receita não quer dizer nada. */}
         {kind === "expense" ? (
-          <label className={s.field}>
+          <label className={s.field} htmlFor={orcamentoId}>
             <span className={s.label}>Orçamento mensal</span>
             <MoneyInput
+              id={orcamentoId}
               name="budget"
               className={s.input}
               defaultCents={categoria?.monthlyBudgetCents}
@@ -837,7 +845,7 @@ export function Registry({
                       <span className={s.rowSub}>
                         dia {r.dueDay} · {r.kind === "subscription" ? "no cartão" : "em conta"}
                         {r.isVariable ? " · valor variável" : ""}
-                                              </span>
+                      </span>
                     </div>
                     <span className={s.rowValue}>
                       {brl(cents(r.isVariable ? (r.estimatedCents ?? 0) : (r.amountCents ?? 0)))}

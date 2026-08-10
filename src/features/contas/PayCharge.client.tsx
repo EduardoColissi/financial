@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import {
   type PaymentState,
   payChargeAction,
@@ -37,6 +37,8 @@ export function PayCharge({
   const [aberto, setAberto] = useState(false);
   const [state, formAction, pending] = useActionState(payChargeAction, INICIAL);
   const [ajuste, ajusteAction, ajustando] = useActionState(setChargeAmountAction, INICIAL);
+  // Uma destas por cobranca na lista: id fixo colidiria.
+  const valorId = useId();
 
   useEffect(() => {
     if (state.ok || ajuste.ok) setAberto(false);
@@ -73,9 +75,9 @@ export function PayCharge({
     <div className={s.panel}>
       <form action={formAction} className={s.inline}>
         <input type="hidden" name="id" value={id} />
-        <label className={s.field}>
+        <label className={s.field} htmlFor={valorId}>
           <span className={s.label}>Valor pago</span>
-          <MoneyInput name="amount" className={s.input} defaultCents={amountCents} />
+          <MoneyInput id={valorId} name="amount" className={s.input} defaultCents={amountCents} />
         </label>
         <label className={s.field}>
           <span className={s.label}>Em</span>

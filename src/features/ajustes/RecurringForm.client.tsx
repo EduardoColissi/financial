@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { type RegistryFormState, saveRecurringAction } from "@/app/actions/registry";
 import { MoneyInput } from "@/components/ui/MoneyInput.client";
 import {
@@ -50,6 +50,7 @@ export function RecurringForm({
   const [state, formAction, pending] = useActionState(saveRecurringAction, INICIAL);
   const [kind, setKind] = useState<RecurrenceKind>(regra?.kind ?? "bill");
   const [variavel, setVariavel] = useState(regra?.isVariable ?? false);
+  const valorId = `${useId()}-valor`;
 
   useEffect(() => {
     if (state.ok) onDone();
@@ -163,9 +164,15 @@ export function RecurringForm({
           <Erro state={state} campo="dueDay" />
         </label>
 
-        <label className={s.field}>
+        <label className={s.field} htmlFor={valorId}>
           <span className={s.label}>{variavel ? "Estimativa" : "Valor"}</span>
-          <MoneyInput name="amount" className={s.input} defaultCents={valorAtual} required />
+          <MoneyInput
+            id={valorId}
+            name="amount"
+            className={s.input}
+            defaultCents={valorAtual}
+            required
+          />
           <span className={s.hint}>
             {variavel ? "O real você digita no mês." : "Mesmo valor todo mês."}
           </span>

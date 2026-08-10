@@ -3,7 +3,6 @@ import {
   boolean,
   check,
   date,
-  index,
   integer,
   pgTable,
   smallint,
@@ -82,10 +81,7 @@ export const investmentSectors = pgTable(
     uniqueIndex("sectors_user_name_uq").on(t.userId, sql`lower(${t.name})`),
     check("sectors_share_ck", sql`${t.sharePercent} between 0 and 100`),
     check("sectors_target_ck", sql`${t.targetCents} is null or ${t.targetCents} >= 0`),
-    check(
-      "sectors_annual_ck",
-      sql`${t.annualTargetCents} is null or ${t.annualTargetCents} >= 0`
-    ),
+    check("sectors_annual_ck", sql`${t.annualTargetCents} is null or ${t.annualTargetCents} >= 0`),
   ]
 );
 

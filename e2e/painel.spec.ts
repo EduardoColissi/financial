@@ -89,8 +89,15 @@ test("parcelado vira parcelamento, nao N lancamentos soltos", async ({ page }) =
 
   await page.getByRole("button", { name: "Salvar lançamento" }).click();
 
-  // Parcelamento nao e' lancamento avulso: cai na fatura do cartao.
-  await expect(page).toHaveURL(new RegExp(`/${MES_CORRENTE}/recorrentes$`));
+  /*
+   * Parcelamento nao e' lancamento avulso: cai na fatura do cartao.
+   *
+   * O mes NAO e' cravado de proposito. A aba lista por fatura, e a parcela de
+   * hoje pertence a' fatura do mes seguinte sempre que a compra vem depois do
+   * fechamento — qual dos dois depende do ciclo do cartao que o modal escolheu.
+   * O que este spec garante e' que o usuario aterrissa onde a parcela ESTA'.
+   */
+  await expect(page).toHaveURL(/\/\d{4}-\d{2}\/recorrentes$/);
   await expect(page.getByText("Parcelado do E2E")).toBeVisible();
   await expect(page.getByText("1 de 3")).toBeVisible();
 });
@@ -185,9 +192,7 @@ test("excluir o pagamento de uma conta devolve ela para o aberto", async ({ page
   await aviso.getByRole("button", { name: "Apagar" }).click();
 
   await page.getByRole("link", { name: /^Contas a pagar/ }).click();
-  await expect(page.getByRole("button", { name: "Pagar" })).toHaveCount(
-    abertasDepoisDePagar + 1
-  );
+  await expect(page.getByRole("button", { name: "Pagar" })).toHaveCount(abertasDepoisDePagar + 1);
 });
 
 /**
@@ -267,9 +272,9 @@ test("aporte escolhe setor e soma no acumulado dele", async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/${MES_CORRENTE}/investimentos$`));
 
   // O botao que aportava sozinho saiu: a fatia agora so' sugere.
-  await expect(page.getByRole("button", { name: /Aportar a sobra|Reconfirmar aporte/ })).toHaveCount(
-    0
-  );
+  await expect(
+    page.getByRole("button", { name: /Aportar a sobra|Reconfirmar aporte/ })
+  ).toHaveCount(0);
 
   const setor = page.locator("h3, h2").filter({ hasText: "Reserva de emergência" }).first();
   await expect(setor).toBeVisible();

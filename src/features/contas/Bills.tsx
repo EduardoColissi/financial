@@ -106,7 +106,7 @@ export function Bills({
                         <span className={s.pillName}>{c.name}</span>
                         <span className={s.pillValue}>
                           {brl0(c.amountCents).replace("R$ ", "")}
-                                                  </span>
+                        </span>
                       </span>
                     ))}
                     {cell.charges.length > MAX_PER_DAY ? (

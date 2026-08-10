@@ -14,6 +14,7 @@ import { digitsFromCents, maskBRL, onlyDigits } from "@/lib/money-mask";
  * ambiguidade — nao ha' campo escondido para sair de sincronia com o visivel.
  */
 export function MoneyInput({
+  id,
   name,
   defaultCents,
   className,
@@ -21,6 +22,12 @@ export function MoneyInput({
   required,
   "aria-label": ariaLabel,
 }: {
+  /**
+   * Para o `htmlFor` do rotulo. Aninhar o campo dentro do `<label>` bastaria
+   * para o navegador, mas nao para quem le' o JSX — daqui de fora so' se ve' um
+   * componente, e um rotulo sem controle visivel deixa de ser rotulo.
+   */
+  id?: string;
   name: string;
   /** Valor inicial. `null`/`undefined` deixa o campo vazio. */
   defaultCents?: Cents | number | null;
@@ -33,6 +40,7 @@ export function MoneyInput({
 
   return (
     <input
+      id={id}
       name={name}
       className={className}
       // `inputMode="numeric"` e nao `type="number"`: o teclado numerico aparece

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useId, useState } from "react";
 import {
   type PaymentState,
   payStatementAction,
@@ -31,6 +31,8 @@ export function PayStatement({
 }) {
   const [aberto, setAberto] = useState(false);
   const [state, formAction, pending] = useActionState(payStatementAction, INICIAL);
+  // Um painel destes por cartao na mesma pagina: id fixo colidiria.
+  const valorId = useId();
 
   // Sem fatura materializada nao ha' o que pagar — acontece em mes sem ciclo.
   if (!statementId) return null;
@@ -61,9 +63,9 @@ export function PayStatement({
     <form action={formAction} className={s.panel}>
       <input type="hidden" name="id" value={statementId} />
 
-      <label className={s.field}>
+      <label className={s.field} htmlFor={valorId}>
         <span className={s.label}>Valor</span>
-        <MoneyInput name="amount" defaultCents={amountCents} className={s.input} />
+        <MoneyInput id={valorId} name="amount" defaultCents={amountCents} className={s.input} />
       </label>
 
       <label className={s.field}>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { deleteSectorAction, type SectorFormState, saveSectorAction } from "@/app/actions/sectors";
 import { ProgressBar } from "@/components/ui/bars";
 import { ColorPicker } from "@/components/ui/ColorPicker.client";
@@ -28,6 +28,9 @@ function SectorForm({
 }) {
   const [state, formAction, pending] = useActionState(saveSectorAction, INICIAL);
   const [reserva, setReserva] = useState(setor?.isEmergencyFund ?? false);
+  const uid = useId();
+  const objetivoId = `${uid}-objetivo`;
+  const metaAnualId = `${uid}-meta-anual`;
 
   useEffect(() => {
     if (state.ok) onDone();
@@ -67,9 +70,10 @@ function SectorForm({
 
         {/* Reserva de emergência não digita meta: são 6× o custo de vida. */}
         {reserva ? null : (
-          <label className={s.field}>
+          <label className={s.field} htmlFor={objetivoId}>
             <span className={s.label}>Objetivo</span>
             <MoneyInput
+              id={objetivoId}
               name="target"
               className={s.input}
               defaultCents={setor && !setor.isEmergencyFund ? setor.targetCents : null}
@@ -78,9 +82,10 @@ function SectorForm({
           </label>
         )}
 
-        <label className={s.field}>
+        <label className={s.field} htmlFor={metaAnualId}>
           <span className={s.label}>Meta do ano</span>
           <MoneyInput
+            id={metaAnualId}
             name="annualTarget"
             className={s.input}
             defaultCents={setor?.annual.targetCents || null}

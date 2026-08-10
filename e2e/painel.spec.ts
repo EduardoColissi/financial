@@ -89,8 +89,15 @@ test("parcelado vira parcelamento, nao N lancamentos soltos", async ({ page }) =
 
   await page.getByRole("button", { name: "Salvar lançamento" }).click();
 
-  // Parcelamento nao e' lancamento avulso: cai na fatura do cartao.
-  await expect(page).toHaveURL(new RegExp(`/${MES_CORRENTE}/recorrentes$`));
+  /*
+   * Parcelamento nao e' lancamento avulso: cai na fatura do cartao.
+   *
+   * O mes NAO e' cravado de proposito. A aba lista por fatura, e a parcela de
+   * hoje pertence a' fatura do mes seguinte sempre que a compra vem depois do
+   * fechamento — qual dos dois depende do ciclo do cartao que o modal escolheu.
+   * O que este spec garante e' que o usuario aterrissa onde a parcela ESTA'.
+   */
+  await expect(page).toHaveURL(/\/\d{4}-\d{2}\/recorrentes$/);
   await expect(page.getByText("Parcelado do E2E")).toBeVisible();
   await expect(page.getByText("1 de 3")).toBeVisible();
 });

@@ -24,7 +24,13 @@ import {
   methodsFor,
   planEntry,
 } from "@/domain/new-entry";
-import { firstDayOf, isSameOrBefore, type PlainDate, type RefMonth } from "@/domain/period";
+import {
+  firstDayOf,
+  isSameOrBefore,
+  type PlainDate,
+  type RefMonth,
+  refMonth,
+} from "@/domain/period";
 import type { AppContext } from "./context";
 
 /**
@@ -67,6 +73,15 @@ export interface CreatedEntry {
   competenceMonth: RefMonth;
   /** Aba em que o lancamento realmente aparece — para onde mandar o usuario. */
   landingSlug: "lancamentos" | "contas" | "recorrentes";
+  /**
+   * Mes em que ele aparece, que nem sempre e' o da competencia.
+   *
+   * Assinatura e parcela no cartao aparecem no mes em que a FATURA vence, e uma
+   * cobranca posterior ao fechamento cai na fatura do mes seguinte. Redirecionar
+   * para o mes da compra levava o usuario a uma aba onde o que ele acabou de
+   * cadastrar nao esta'.
+   */
+  landingMonth: RefMonth;
   /** A primeira ocorrencia ja' nasceu quitada? */
   settled: boolean;
 }
@@ -227,6 +242,7 @@ async function createSingleTransaction(
     shape: plan.shape,
     competenceMonth: plan.competenceMonth,
     landingSlug: "lancamentos",
+    landingMonth: plan.competenceMonth,
     settled: plan.settlesOnPurchase,
   };
 }
@@ -343,10 +359,27 @@ async function createRule(
     );
   });
 
+  /*
+   * Onde a primeira cobranca foi parar.
+   *
+   * A aba de assinaturas lista por FATURA, e a cobranca de hoje pode pertencer a'
+   * fatura do mes que vem — e' o caso de qualquer cobranca posterior ao
+   * fechamento. Ler o mes da fatura ligada, em vez de recalcular, garante que o
+   * redirect aponte para a mesma fatura que a materializacao escolheu.
+   */
+  let landingMonth = plan.competenceMonth;
+  if (!settleFirst && card && charge?.statementId) {
+    const statement = await db.query.cardStatements.findFirst({
+      where: eq(cardStatements.id, charge.statementId),
+    });
+    if (statement) landingMonth = refMonth(statement.refMonth.slice(0, 7));
+  }
+
   return {
     shape: plan.shape,
     competenceMonth: plan.competenceMonth,
     landingSlug: settleFirst ? "lancamentos" : card ? "recorrentes" : "contas",
+    landingMonth,
     settled: settleFirst,
   };
 }

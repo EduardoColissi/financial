@@ -54,51 +54,64 @@ export function Subscriptions({ data, filter }: { data: SubscriptionsResult; fil
       </div>
 
       <Notice tone="warn">
-        Somando o previsto, este mês fecha em {brl(addCents(data.postedCents, data.forecastCents))}{" "}
-        de cobranças no cartão. Elas só entram na fatura no dia do faturamento — antes disso são
-        previsão, não dívida.
+        Somando o previsto, as faturas que vencem neste mês fecham em{" "}
+        {brl(addCents(data.postedCents, data.forecastCents))} de cobranças recorrentes. Elas só
+        entram na fatura no dia do faturamento — antes disso são previsão, não dívida.
       </Notice>
 
       <Card>
+        {/*
+          O eixo e' o periodo FATURADO, nao o mes: um ciclo que fecha dia 05
+          comeca no dia 06 do mes anterior. Por isso os dias vem rotulados com
+          o mes — a faixa atravessa a virada.
+        */}
         <SectionHeader
           title="Linha do tempo do faturamento"
-          sub="cheio = já caiu na fatura · translúcido = ainda vai cair"
+          sub={
+            data.timeline.length > 0
+              ? `${data.timeline[0]?.label} a ${data.timeline[data.timeline.length - 1]?.label} · cheio = já caiu na fatura · translúcido = ainda vai cair`
+              : "cheio = já caiu na fatura · translúcido = ainda vai cair"
+          }
         />
-        <div className={s.timeline}>
-          {data.timeline.map((d) => (
-            <div
-              key={d.day}
-              className={cx(s.day, d.today && s.dayToday)}
-              style={
-                {
-                  "--day-bg": d.today
-                    ? "var(--cal-today)"
-                    : d.marks.length > 0
-                      ? "rgba(255,255,255,.05)"
-                      : "transparent",
-                  "--day-border": d.today ? "var(--pos-soft)" : "transparent",
-                } as CSSProperties
-              }
-              title={`dia ${d.day}: ${d.marks.length} cobrança(s)`}
-            >
-              <span className={s.dayMarks}>
-                {d.marks.map((m) => (
-                  <i
-                    key={m.id}
-                    className={s.mark}
-                    style={
-                      {
-                        "--mark-color": m.color,
-                        "--mark-opacity": m.posted ? "1" : "0.4",
-                      } as CSSProperties
-                    }
-                  />
-                ))}
-              </span>
-              <span className={s.dayNumber}>{d.day % 2 === 1 ? d.day : ""}</span>
-            </div>
-          ))}
-        </div>
+        {data.timeline.length === 0 ? (
+          <EmptyState>Nenhuma cobrança recorrente nesta fatura.</EmptyState>
+        ) : (
+          <div className={s.timeline}>
+            {data.timeline.map((d) => (
+              <div
+                key={d.key}
+                className={cx(s.day, d.today && s.dayToday)}
+                style={
+                  {
+                    "--day-bg": d.today
+                      ? "var(--cal-today)"
+                      : d.marks.length > 0
+                        ? "rgba(255,255,255,.05)"
+                        : "transparent",
+                    "--day-border": d.today ? "var(--pos-soft)" : "transparent",
+                  } as CSSProperties
+                }
+                title={`${d.label}: ${d.marks.length} cobrança(s)`}
+              >
+                <span className={s.dayMarks}>
+                  {d.marks.map((m) => (
+                    <i
+                      key={m.id}
+                      className={s.mark}
+                      style={
+                        {
+                          "--mark-color": m.color,
+                          "--mark-opacity": m.posted ? "1" : "0.4",
+                        } as CSSProperties
+                      }
+                    />
+                  ))}
+                </span>
+                <span className={s.dayNumber}>{d.day % 2 === 1 ? d.day : ""}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       <Card>
@@ -119,7 +132,8 @@ export function Subscriptions({ data, filter }: { data: SubscriptionsResult; fil
         ) : (
           <table className={s.table}>
             <caption style={{ position: "absolute", left: -9999 }}>
-              Cobranças recorrentes do mês, com categoria, cartão, dia, tipo, progresso e valor
+              Cobranças da fatura que vence neste mês, com categoria, cartão, dia, tipo, progresso e
+              valor
             </caption>
             <thead>
               <tr>

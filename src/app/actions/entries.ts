@@ -106,9 +106,11 @@ export async function createEntryAction(
   // mudam juntos quando entra dinheiro novo.
   revalidatePath("/[month]", "layout");
 
-  // Manda o usuario para onde o lancamento realmente foi parar. Um parcelamento
-  // nao aparece em "Lançamentos" — vira parcela na fatura ou conta a pagar.
-  redirect(`/${result.competenceMonth}/${result.landingSlug}`);
+  // Manda o usuario para onde o lancamento realmente foi parar — aba E mes. Um
+  // parcelamento nao aparece em "Lançamentos" (vira parcela na fatura ou conta a
+  // pagar), e no cartao pode aparecer no mes seguinte, que e' quando a fatura
+  // dele vence.
+  redirect(`/${result.landingMonth}/${result.landingSlug}`);
 }
 
 /**

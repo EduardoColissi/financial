@@ -40,14 +40,21 @@ async function main() {
       };
     };
 
+    // O mes corrente, que e' onde o seed poe os dados — cravar uma data aqui
+    // faria a prova rodar, com o tempo, num mes vazio.
+    const mes = monthOf(todayInTimeZone(user.timezone));
+
+    // Aquece antes de contar. A materializacao tambem cria a fatura do ciclo em
+    // que cada assinatura cai, que costuma ser a do mes seguinte — trabalho
+    // legitimo da PRIMEIRA execucao. Contar antes dele acusaria como duplicata
+    // o que e' so' a geracao inicial.
+    await materializeMonth(db, target, mes);
+
     const antes = await contar();
     console.log(`Antes:  ${antes.statements} faturas, ${antes.charges} cobrancas`);
 
     // 10 materializacoes simultaneas do MESMO mes. Sem o advisory lock e o
     // UNIQUE, aqui e' onde a duplicata apareceria.
-    // O mes corrente, que e' onde o seed poe os dados — cravar uma data aqui
-    // faria a prova rodar, com o tempo, num mes vazio.
-    const mes = monthOf(todayInTimeZone(user.timezone));
     await Promise.all(Array.from({ length: 10 }, () => materializeMonth(db, target, mes)));
 
     const depois = await contar();

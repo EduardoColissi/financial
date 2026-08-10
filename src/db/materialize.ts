@@ -1,8 +1,8 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { cycleOfRefMonth } from "@/domain/card-cycle";
+import { cycleFor, cycleOfRefMonth } from "@/domain/card-cycle";
 import { isActiveIn, sequenceFor } from "@/domain/installments";
-import { clampDay, firstDayOf, type RefMonth, refMonth } from "@/domain/period";
+import { clampDay, firstDayOf, plainDate, type RefMonth, refMonth } from "@/domain/period";
 import type * as schema from "./schema";
 import { cardStatements, creditCards, recurringRules, scheduledCharges } from "./schema";
 
@@ -54,7 +54,7 @@ export async function materializeMonth(
 
     const statementsCreated = await buildStatements(tx as Database, target, month);
     const chargesCreated = await buildCharges(tx as Database, target, month);
-    await linkChargesToStatements(tx as Database, target, month);
+    await linkChargesToStatements(tx as Database, target);
 
     return { statementsCreated, chargesCreated };
   });
@@ -146,15 +146,72 @@ async function buildCharges(
 /**
  * Liga cada cobranca de cartao a' fatura do ciclo em que ela cai.
  *
- * Um UPDATE so', em SQL, porque depende das duas insercoes anteriores — e' por
- * isso que a transacao precisa ser interativa, e por isso que o driver `pg`
- * ganhou do `neon-http`.
+ * Duas coisas acontecem aqui, nesta ordem, e nenhuma pode faltar:
+ *
+ *  1. a fatura do ciclo precisa EXISTIR. Uma assinatura cobrada depois do
+ *     fechamento cai na fatura do mes SEGUINTE — num cartao que fecha dia 05,
+ *     qualquer cobranca do dia 06 em diante. Essa fatura so' era criada quando
+ *     alguem abria aquele mes na tela, entao o vinculo por data nao achava nada
+ *     e a cobranca nascia orfa. Como cada materializacao olhava apenas as
+ *     cobrancas do proprio mes, ninguem voltava para resgata-la: ela sumia do
+ *     total da fatura para sempre, e a fatura era paga a menos;
+ *  2. o vinculo em si, por data.
+ *
+ * O passo 1 usa `cycleFor`, o MESMO caminho das compras avulsas em
+ * `services/entries.statementIdFor`. Assinatura e compra passam a cair na
+ * fatura pela mesma regra, em vez de por dois codigos que podiam divergir.
+ *
+ * Varre as orfas de QUALQUER mes, nao so' as do mes recem-gerado: e' o que cura
+ * as que ficaram para tras. Uma cobranca ja' ligada nunca e' remexida — o
+ * vinculo e' congelado, como o das compras.
  */
-async function linkChargesToStatements(
+export async function linkChargesToStatements(
   db: Database,
-  target: MaterializeTarget,
-  month: RefMonth
+  target: MaterializeTarget
 ): Promise<void> {
+  const orphans = await db
+    .select({
+      cardId: creditCards.id,
+      dueDate: scheduledCharges.dueDate,
+      closingDay: creditCards.closingDay,
+      dueDay: creditCards.dueDay,
+      bestDayOverride: creditCards.bestDayOverride,
+    })
+    .from(scheduledCharges)
+    .innerJoin(recurringRules, eq(recurringRules.id, scheduledCharges.ruleId))
+    .innerJoin(creditCards, eq(creditCards.id, recurringRules.cardId))
+    .where(and(eq(scheduledCharges.userId, target.userId), isNull(scheduledCharges.statementId)));
+
+  if (orphans.length === 0) return;
+
+  // Uma fatura por (cartao, mes de vencimento) — varias cobrancas do mesmo
+  // ciclo pedem a MESMA fatura, e `values()` com duplicata interna passaria por
+  // cima do `ON CONFLICT`, que so' enxerga o que ja' esta' gravado.
+  const wanted = new Map<string, typeof cardStatements.$inferInsert>();
+  for (const charge of orphans) {
+    const cycle = cycleFor(
+      {
+        closingDay: charge.closingDay,
+        dueDay: charge.dueDay,
+        bestDayOverride: charge.bestDayOverride,
+      },
+      plainDate(charge.dueDate)
+    );
+    wanted.set(`${charge.cardId}:${cycle.refMonth}`, {
+      userId: target.userId,
+      cardId: charge.cardId,
+      refMonth: firstDayOf(cycle.refMonth),
+      periodStart: cycle.periodStart,
+      periodEnd: cycle.periodEnd,
+      dueDate: cycle.dueDate,
+    });
+  }
+
+  await db
+    .insert(cardStatements)
+    .values([...wanted.values()])
+    .onConflictDoNothing({ target: [cardStatements.cardId, cardStatements.refMonth] });
+
   await db.execute(sql`
     update scheduled_charges sc
        set statement_id = st.id
@@ -164,9 +221,8 @@ async function linkChargesToStatements(
        and st.user_id = rr.user_id
      where sc.rule_id = rr.id
        and sc.user_id = ${target.userId}
-       and sc.ref_month = ${firstDayOf(month)}
+       and sc.statement_id is null
        and rr.card_id is not null
-       and sc.statement_id is distinct from st.id
        and sc.due_date between st.period_start and st.period_end
   `);
 }

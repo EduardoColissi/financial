@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { MoneyError, parseBRL } from "@/domain/money";
+import { cents, MoneyError, parseBRL } from "@/domain/money";
 import { PeriodError, plainDate } from "@/domain/period";
 import { parseColor, RegistryError } from "@/domain/registry";
 import { getContext } from "@/services/context";
@@ -74,6 +74,10 @@ function parseForm(formData: FormData): SectorDraft {
     }
   }
 
+  // Campo vazio aqui e' zero, e nao "sem valor": o saldo de abertura entra numa
+  // soma, e um nulo viraria zero de qualquer jeito uma linha depois.
+  const openingCents = meta("opening", "O valor já aportado") ?? cents(0);
+
   return {
     name,
     color,
@@ -82,6 +86,7 @@ function parseForm(formData: FormData): SectorDraft {
     annualTargetCents,
     targetDate,
     isEmergencyFund,
+    openingCents,
   };
 }
 

@@ -92,6 +92,13 @@
       "when": 1785986450710,
       "tag": "0012_credit_weighs_on_the_statement_month",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786426783555,
+      "tag": "0013_sectors_opening_balance",
+      "breakpoints": true
     }
   ]
 }

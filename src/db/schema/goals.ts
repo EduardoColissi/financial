@@ -66,6 +66,20 @@ export const investmentSectors = pgTable(
     targetCents: integer("target_cents"),
 
     /**
+     * O que ja' estava aplicado aqui ANTES do app existir.
+     *
+     * Nao e' lancamento e nunca vira um: esse dinheiro saiu de um caixa que o
+     * app nunca viu, entao descontar dele agora cobraria duas vezes a mesma
+     * despesa. Entra so' no acumulado, para que a meta seja medida contra o
+     * patrimonio de verdade em vez de comecar do zero no dia da instalacao.
+     *
+     * Pelo mesmo motivo fica de fora do que foi aportado no mes e no ano: esses
+     * numeros medem RITMO, e um saldo de abertura de anos atras os encheria de
+     * uma vez.
+     */
+    openingCents: integer("opening_cents").notNull().default(0),
+
+    /**
      * Marca a reserva de emergencia. Ela nao tem meta fixa: a meta sai da media
      * das contas obrigatorias, e por isso amadurece a cada mes lancado.
      */
@@ -82,6 +96,7 @@ export const investmentSectors = pgTable(
     check("sectors_share_ck", sql`${t.sharePercent} between 0 and 100`),
     check("sectors_target_ck", sql`${t.targetCents} is null or ${t.targetCents} >= 0`),
     check("sectors_annual_ck", sql`${t.annualTargetCents} is null or ${t.annualTargetCents} >= 0`),
+    check("sectors_opening_ck", sql`${t.openingCents} >= 0`),
   ]
 );
 

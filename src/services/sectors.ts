@@ -8,6 +8,7 @@ import { firstDayOf, type PlainDate, plainDate, type RefMonth } from "@/domain/p
 import { RegistryError } from "@/domain/registry";
 import {
   type AnnualProgress,
+  accumulated,
   allocate,
   annualProgress,
   type SectorProgress,
@@ -23,6 +24,10 @@ import type { AppContext } from "./context";
  * Dinheiro entra aqui por um caminho so': um lancamento de aporte apontando para
  * o setor. Nao ha' tabela de contribuicao — o acumulado E' a soma dos
  * lancamentos, e por isso corrigir um aporte na lista corrige o setor junto.
+ *
+ * A excecao e' o SALDO DE ABERTURA, digitado no proprio setor: patrimonio que
+ * ja' existia antes do app. Ele nao e' lancamento porque nunca saiu deste
+ * caixa — descontar agora cobraria de novo uma despesa paga la' atras.
  *
  * A fatia da sobra e' SUGESTAO. O app calcula quanto o mes destinaria a cada
  * setor e mostra o numero; quem aporta e' o dono, lancando. Repartir sozinho
@@ -41,6 +46,10 @@ export interface SectorView extends SectorProgress {
   sharePercent: number;
   isEmergencyFund: boolean;
   targetDate: PlainDate | null;
+  /** O que ja' estava aplicado antes do app. Entra no acumulado, nunca no caixa. */
+  openingCents: Cents;
+  /** Soma dos APORTES lancados, sem o saldo de abertura. */
+  contributedCents: Cents;
   /** Quanto ESTE mes destinaria a ele, pela fatia. Indicacao, nao aporte. */
   suggestedCents: Cents;
   /** Quanto ja' entrou neste mes, de verdade. */
@@ -59,6 +68,10 @@ export interface SectorsView {
   unallocatedCents: Cents;
   /** Aportado neste mes, somando todos os setores. */
   contributedCents: Cents;
+  /** Patrimonio de todos os setores: aberturas + tudo que ja' foi aportado. */
+  accumulatedCents: Cents;
+  /** Quanto do acumulado veio de antes do app. */
+  openingCents: Cents;
   /** Aportado no ano corrente, somando todos os setores. */
   investedThisYearCents: Cents;
   /** Soma das metas anuais dos setores que tem uma. */
@@ -132,8 +145,12 @@ export const getSectors = cache(async (ctx: AppContext, month: RefMonth): Promis
     // Reserva de emergencia nao tem meta fixa: sao 6x o custo de vida, que muda
     // a cada mes lancado. As outras usam a meta digitada.
     const meta = l.isEmergencyFund ? caixa.emergencyTargetCents : cents(l.targetCents ?? 0);
+    // O saldo de abertura conta para a META, e so' para ela. Ficar de fora do
+    // mes e do ano e' proposital: aqueles dois numeros medem ritmo, e um saldo
+    // de anos atras os encheria de uma vez.
+    const abertura = cents(l.openingCents);
     const progresso = sectorProgress(
-      aporte.total,
+      accumulated(abertura, aporte.total),
       meta,
       ctx.today,
       l.targetDate ? plainDate(l.targetDate) : null
@@ -146,6 +163,8 @@ export const getSectors = cache(async (ctx: AppContext, month: RefMonth): Promis
       sharePercent: l.sharePercent,
       isEmergencyFund: l.isEmergencyFund,
       targetDate: l.targetDate ? plainDate(l.targetDate) : null,
+      openingCents: abertura,
+      contributedCents: aporte.total,
       suggestedCents: divisao.get(l.id) ?? cents(0),
       thisMonthCents: aporte.mes,
       annual: annualProgress(aporte.ano, cents(l.annualTargetCents ?? 0)),
@@ -162,6 +181,8 @@ export const getSectors = cache(async (ctx: AppContext, month: RefMonth): Promis
     leftoverCents: sobra,
     unallocatedCents: cents(Math.max(0, sobra - Math.floor((sobra * totalShare) / 100))),
     contributedCents: soma((s) => s.thisMonthCents),
+    accumulatedCents: soma((s) => s.accumulatedCents),
+    openingCents: soma((s) => s.openingCents),
     investedThisYearCents: soma((s) => s.annual.investedCents),
     annualTargetCents: soma((s) => s.annual.targetCents),
     year,
@@ -178,6 +199,12 @@ export interface SectorDraft {
   annualTargetCents: Cents | null;
   targetDate: PlainDate | null;
   isEmergencyFund: boolean;
+  /**
+   * Saldo de abertura. Zero, e nao nulo: "nao tinha nada aqui antes" e' uma
+   * resposta, e a coluna e' `not null` justamente para o acumulado nunca
+   * depender de um valor ausente.
+   */
+  openingCents: Cents;
 }
 
 /**
@@ -207,6 +234,7 @@ export async function createSector(ctx: AppContext, draft: SectorDraft): Promise
     annualTargetCents: draft.annualTargetCents,
     targetDate: draft.targetDate,
     isEmergencyFund: draft.isEmergencyFund,
+    openingCents: draft.openingCents,
   });
 }
 
@@ -222,6 +250,7 @@ export async function updateSector(ctx: AppContext, id: string, draft: SectorDra
       annualTargetCents: draft.annualTargetCents,
       targetDate: draft.targetDate,
       isEmergencyFund: draft.isEmergencyFund,
+      openingCents: draft.openingCents,
     })
     .where(and(eq(investmentSectors.id, id), eq(investmentSectors.userId, ctx.userId)))
     .returning({ id: investmentSectors.id });

@@ -31,6 +31,7 @@ function SectorForm({
   const uid = useId();
   const objetivoId = `${uid}-objetivo`;
   const metaAnualId = `${uid}-meta-anual`;
+  const aberturaId = `${uid}-abertura`;
 
   useEffect(() => {
     if (state.ok) onDone();
@@ -81,6 +82,22 @@ function SectorForm({
             <span className={s.hint}>Onde você quer chegar, sem prazo curto.</span>
           </label>
         )}
+
+        {/*
+          O que já estava aplicado antes do app. Não é lançamento e não passa
+          pelo caixa: aquele dinheiro saiu de um mês que o app nunca viu.
+        */}
+        <label className={s.field} htmlFor={aberturaId}>
+          <span className={s.label}>Já aportado antes</span>
+          <MoneyInput
+            id={aberturaId}
+            name="opening"
+            className={s.input}
+            defaultCents={setor?.openingCents || null}
+            placeholder="opcional"
+          />
+          <span className={s.hint}>Conta para a meta, mas não sai do seu caixa.</span>
+        </label>
 
         <label className={s.field} htmlFor={metaAnualId}>
           <span className={s.label}>Meta do ano</span>
@@ -201,6 +218,16 @@ export function Sectors({ data }: { data: SectorsView }) {
           <h2 className={s.title}>Setores</h2>
           <p className={s.sub}>
             A fatia sugere quanto da sobra vai para cada um. O aporte você faz em Lançamentos.
+            {data.accumulatedCents > 0 ? (
+              <>
+                {" "}
+                Aplicados hoje: <strong>{brl(data.accumulatedCents)}</strong>
+                {data.openingCents > 0 ? (
+                  <> — {brl(data.openingCents)} vindos de antes do app</>
+                ) : null}
+                .
+              </>
+            ) : null}
           </p>
         </div>
         <div className={s.headActions}>
@@ -267,6 +294,23 @@ export function Sectors({ data }: { data: SectorsView }) {
                     color={setor.color}
                     height={8}
                   />
+
+                  {/*
+                    Sem esta linha, o acumulado de quem digitou saldo de
+                    abertura não bate com a soma dos aportes da lista — e a
+                    diferença parece erro do app em vez de dinheiro de antes.
+                  */}
+                  {setor.openingCents > 0 ? (
+                    <p className={s.meta}>
+                      Inclui <strong>{brl(setor.openingCents)}</strong> que já estavam aplicados
+                      antes do app
+                      {setor.contributedCents > 0 ? (
+                        <> — daqui para cá foram {brl(setor.contributedCents)}.</>
+                      ) : (
+                        ", e nenhum aporte lançado por aqui ainda."
+                      )}
+                    </p>
+                  ) : null}
 
                   <p className={s.meta}>
                     {setor.reached ? (

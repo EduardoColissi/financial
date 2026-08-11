@@ -70,6 +70,18 @@ export function sharesAreValid(sectors: readonly SectorShare[]): boolean {
 
 // ── progresso rumo ao objetivo ───────────────────────────────────────────────
 
+/**
+ * O acumulado do setor: o que ja' existia + o que foi aportado pelo app.
+ *
+ * O saldo de abertura e' dinheiro que saiu de um caixa que o app nunca viu.
+ * Somar aqui e' o ponto: a meta passa a ser medida contra o patrimonio de
+ * verdade. Descontar do caixa e' que seria errado — cobraria de novo uma
+ * despesa ja' paga la' atras.
+ */
+export function accumulated(openingCents: Cents, contributedCents: Cents): Cents {
+  return cents(Math.max(0, openingCents) + contributedCents);
+}
+
 export interface SectorProgress {
   accumulatedCents: Cents;
   targetCents: Cents;

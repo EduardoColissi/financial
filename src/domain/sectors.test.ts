@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { cents } from "./money";
 import { plainDate } from "./period";
-import { allocate, annualProgress, sectorProgress, sharesAreValid, somaFatias } from "./sectors";
+import {
+  accumulated,
+  allocate,
+  annualProgress,
+  sectorProgress,
+  sharesAreValid,
+  somaFatias,
+} from "./sectors";
 
 const c = (n: number) => cents(n);
 const setor = (id: string, sharePercent: number) => ({ id, sharePercent });
@@ -82,6 +89,39 @@ describe("sharesAreValid", () => {
 
   it("soma as fatias", () => {
     expect(somaFatias([setor("a", 60), setor("b", 25)])).toBe(85);
+  });
+});
+
+describe("accumulated", () => {
+  it("soma o saldo de abertura ao que foi aportado", () => {
+    expect(accumulated(c(500000), c(120000))).toBe(620000);
+  });
+
+  it("setor sem abertura e' so' a soma dos aportes", () => {
+    expect(accumulated(c(0), c(120000))).toBe(120000);
+  });
+
+  /** Abertura sem aporte nenhum ja' conta: o patrimonio existe desde antes. */
+  it("abertura sozinha ja' e' patrimonio", () => {
+    expect(accumulated(c(500000), c(0))).toBe(500000);
+  });
+
+  /** A coluna e' `>= 0`, mas um negativo vindo de fora nao pode virar desconto. */
+  it("abertura negativa nao come o aportado", () => {
+    expect(accumulated(c(-500000), c(120000))).toBe(120000);
+  });
+
+  it("leva o saldo de abertura para dentro do progresso da meta", () => {
+    // Meta de 10 mil com 5 mil ja' aplicados antes: a barra comeca na metade,
+    // e nao no zero, mesmo sem nenhum aporte lancado no app.
+    const p = sectorProgress(
+      accumulated(c(500000), c(0)),
+      c(1000000),
+      plainDate("2026-08-04"),
+      null
+    );
+    expect(p.percent).toBe(50);
+    expect(p.missingCents).toBe(500000);
   });
 });
 

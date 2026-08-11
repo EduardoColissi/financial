@@ -58,6 +58,22 @@ input::placeholder {
   color: var(--fg-dim);
 }
 
+/*
+ * Select e datalist. `color-scheme: dark` sozinho nao resolve: assim que o
+ * controle ganha background proprio, o popup passa a usar esse valor. Fundo
+ * opaco no controle e nas opcoes — ver a nota de --surface-select em tokens.css.
+ */
+select {
+  background-color: var(--surface-select);
+  cursor: pointer;
+}
+
+option,
+optgroup {
+  background-color: var(--surface-select);
+  color: var(--fg);
+}
+
 ::selection {
   background: oklch(0.5 0.12 158);
   color: var(--fg);

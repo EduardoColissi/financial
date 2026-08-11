@@ -21,6 +21,16 @@
   --surface-4: rgba(255, 255, 255, 0.13); /* item de nav ativo */
   --surface-input: rgba(255, 255, 255, 0.05);
   --surface-hover: rgba(255, 255, 255, 0.12);
+  /*
+   * Superficie OPACA do <select>. Unica no arquivo que nao pode ser translucida:
+   * o popup nativo do Chrome/Edge e' pintado com o background-color do proprio
+   * controle e, translucido, ele compoe sobre o branco do sistema — lista clara
+   * com texto claro em cima. Os dois valores sao o equivalente opaco de
+   * --surface-input e --surface-hover empilhados sobre --surface e --bg, que e'
+   * onde todo campo do produto vive (formulario dentro de card de vidro).
+   */
+  --surface-select: oklch(0.3 0.031 170);
+  --surface-select-hover: oklch(0.35 0.028 170);
   --track: rgba(255, 255, 255, 0.1);
   --stroke: rgba(255, 255, 255, 0.1);
   --stroke-soft: rgba(255, 255, 255, 0.07);

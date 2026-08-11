@@ -183,6 +183,21 @@
   border-color: var(--pos-soft);
 }
 
+/*
+ * O select usa a mesma classe dos campos de texto, mas nao pode ficar com o
+ * fundo translucido do .input — o popup nativo herda esse valor e clareia.
+ * A regra de globals.css sozinha perde para .input na cascata; dai o seletor
+ * de elemento junto da classe.
+ */
+select.input {
+  background-color: var(--surface-select);
+  cursor: pointer;
+}
+
+select.input:hover {
+  background-color: var(--surface-select-hover);
+}
+
 .hint {
   font-family: var(--font-mono-stack);
   font-size: 9.5px;

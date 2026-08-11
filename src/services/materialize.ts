@@ -22,6 +22,6 @@ export const ensureMonthMaterialized = cache(
     const current = refMonth(ctx.today.slice(0, 7));
     if (monthsBetween(current, month) > ctx.maxFutureMonths) return null;
 
-    return materializeMonth(db, { userId: ctx.userId }, month);
+    return materializeMonth(db, { userId: ctx.userId, today: ctx.today }, month);
   }
 );

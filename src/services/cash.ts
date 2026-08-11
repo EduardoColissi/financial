@@ -83,7 +83,10 @@ async function flowsFrom(ctx: AppContext, primeiro: RefMonth, ultimo: RefMonth) 
                   from transactions t2
                  where t2.statement_id = st.id and t2.source <> 'card_payment')
                + (select coalesce(sum(sc2.amount_cents),0) from scheduled_charges sc2
-                   where sc2.statement_id = st.id and sc2.status <> 'skipped'))
+                   where sc2.statement_id = st.id and sc2.status <> 'skipped'
+                     -- A cobranca que ja' caiu virou lancamento e esta' na soma
+                     -- de cima; contar as duas dobraria a fatura pendente.
+                     and sc2.transaction_id is null))
            ), 0) from card_statements st
            where st.user_id = ${ctx.userId} and st.ref_month = m.ref and st.status <> 'paid')
       )::text as pending,

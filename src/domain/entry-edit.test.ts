@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { canEdit, deleteEffect, type EntryLink, editableFields } from "./entry-edit";
 
 const SOLTO: EntryLink = { kind: "none" };
-const COBRANCA: EntryLink = { kind: "charge", label: "Aluguel" };
+const COBRANCA: EntryLink = { kind: "charge", label: "Aluguel", onCard: false };
+const ASSINATURA: EntryLink = { kind: "charge", label: "Netflix Premium", onCard: true };
 const FATURA: EntryLink = { kind: "statement", label: "Nubank", charges: 3 };
 
 describe("editableFields", () => {
@@ -19,7 +20,7 @@ describe("editableFields", () => {
   // Categoria e conta vem da regra. Mudar so' no lancamento faria a proxima
   // ocorrencia nascer com a categoria antiga, e as duas discordariam para sempre.
   it("quitacao nao troca categoria nem conta", () => {
-    for (const link of [COBRANCA, FATURA]) {
+    for (const link of [COBRANCA, ASSINATURA, FATURA]) {
       expect(canEdit(link, "amount")).toBe(true);
       expect(canEdit(link, "occurredOn")).toBe(true);
       expect(canEdit(link, "category")).toBe(false);
@@ -35,7 +36,7 @@ describe("editableFields", () => {
   });
 
   it("descricao e data valem em todos", () => {
-    for (const link of [SOLTO, COBRANCA, FATURA]) {
+    for (const link of [SOLTO, COBRANCA, ASSINATURA, FATURA]) {
       expect(canEdit(link, "description")).toBe(true);
       expect(canEdit(link, "occurredOn")).toBe(true);
     }
@@ -51,6 +52,16 @@ describe("deleteEffect", () => {
   // pagamento nao apaga a conta, destrava ela de volta para o aberto.
   it("diz que a conta volta para o aberto", () => {
     expect(deleteEffect(COBRANCA)).toContain("volta para as contas a pagar");
+  });
+
+  // No cartao o efeito e' outro: ninguem pagou nada, entao nao ha' conta a pagar
+  // para onde voltar. Prometer isso mandaria o dono procurar numa aba onde a
+  // cobranca nunca vai aparecer — quem paga assinatura de cartao e' a fatura.
+  it("assinatura de cartao sai da fatura em vez de voltar para as contas", () => {
+    const efeito = deleteEffect(ASSINATURA);
+    expect(efeito).toContain("sai desta fatura");
+    expect(efeito).toContain("pulada");
+    expect(efeito).not.toContain("contas a pagar");
   });
 
   it("conta as cobrancas que voltam com a fatura", () => {

@@ -27,16 +27,23 @@ async function main() {
       console.error("Rode `pnpm db:seed` antes.");
       process.exit(1);
     }
-    const target = { userId: user.id };
+    const target = { userId: user.id, today: todayInTimeZone(user.timezone) };
 
+    // Os lancamentos das cobrancas entram na conta: eles sao o terceiro insert
+    // da materializacao, e duplicar um deles cobra a assinatura duas vezes no
+    // orcamento — em silencio, como todo defeito de idempotencia.
     const contar = async () => {
-      const r = await db.execute<{ statements: string; charges: string }>(sql`
+      const r = await db.execute<{ statements: string; charges: string; posted: string }>(sql`
         select (select count(*) from card_statements where user_id = ${user.id})::text as statements,
-               (select count(*) from scheduled_charges where user_id = ${user.id})::text as charges
+               (select count(*) from scheduled_charges where user_id = ${user.id})::text as charges,
+               (select count(*) from transactions
+                 where user_id = ${user.id}
+                   and external_id like 'charge:%')::text as posted
       `);
       return {
         statements: Number(r.rows[0]?.statements ?? 0),
         charges: Number(r.rows[0]?.charges ?? 0),
+        posted: Number(r.rows[0]?.posted ?? 0),
       };
     };
 
@@ -51,16 +58,24 @@ async function main() {
     await materializeMonth(db, target, mes);
 
     const antes = await contar();
-    console.log(`Antes:  ${antes.statements} faturas, ${antes.charges} cobrancas`);
+    console.log(
+      `Antes:  ${antes.statements} faturas, ${antes.charges} cobrancas, ${antes.posted} lancamentos`
+    );
 
     // 10 materializacoes simultaneas do MESMO mes. Sem o advisory lock e o
     // UNIQUE, aqui e' onde a duplicata apareceria.
     await Promise.all(Array.from({ length: 10 }, () => materializeMonth(db, target, mes)));
 
     const depois = await contar();
-    console.log(`Depois: ${depois.statements} faturas, ${depois.charges} cobrancas`);
+    console.log(
+      `Depois: ${depois.statements} faturas, ${depois.charges} cobrancas, ${depois.posted} lancamentos`
+    );
 
-    if (depois.statements !== antes.statements || depois.charges !== antes.charges) {
+    if (
+      depois.statements !== antes.statements ||
+      depois.charges !== antes.charges ||
+      depois.posted !== antes.posted
+    ) {
       console.error("  ERRO: 10 chamadas concorrentes ALTERARAM a contagem");
       falhas++;
     } else {
@@ -99,8 +114,11 @@ async function main() {
     const antesRepeat = await contar();
     await materializeMonth(db, target, distante);
     const depoisRepeat = await contar();
-    if (depoisRepeat.charges !== antesRepeat.charges) {
-      console.error("  ERRO: reabrir o mes duplicou cobrancas");
+    if (
+      depoisRepeat.charges !== antesRepeat.charges ||
+      depoisRepeat.posted !== antesRepeat.posted
+    ) {
+      console.error("  ERRO: reabrir o mes duplicou cobrancas ou lancamentos");
       falhas++;
     } else {
       console.log("  ok: reabrir o mes e' no-op");

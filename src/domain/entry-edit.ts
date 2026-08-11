@@ -19,8 +19,16 @@
 export type EntryLink =
   /** Linha solta: ninguem aponta para ela. */
   | { kind: "none" }
-  /** Quita uma conta a pagar. Apagar devolve a cobranca ao aberto. */
-  | { kind: "charge"; label: string }
+  /**
+   * Nasceu de uma cobranca de regra. Sao dois casos com desfecho oposto:
+   *
+   * - em conta (`onCard: false`), o lancamento e' a QUITACAO da cobranca, e
+   *   apagar devolve ela para o aberto;
+   * - no cartao (`onCard: true`), ele e' a cobranca CAINDO na fatura — ninguem
+   *   pagou nada ainda —, e apagar significa "esta cobranca nao aconteceu":
+   *   ela sai da fatura e o mes fica pulado.
+   */
+  | { kind: "charge"; label: string; onCard: boolean }
   /** Paga uma fatura. Apagar reabre a fatura E as cobrancas dentro dela. */
   | { kind: "statement"; label: string; charges: number };
 
@@ -72,7 +80,12 @@ export function deleteEffect(link: EntryLink): string | null {
     case "none":
       return null;
     case "charge":
-      return `“${link.label}” volta para as contas a pagar, e o dinheiro volta para o caixa.`;
+      // No cartao nao ha' pagamento para desfazer: o que se desfaz e' a propria
+      // cobranca do mes. Dizer "volta para as contas a pagar" seria prometer uma
+      // conta a pagar que nao existe — quem paga isto e' a fatura.
+      return link.onCard
+        ? `“${link.label}” sai desta fatura, e a cobrança deste mês fica marcada como pulada.`
+        : `“${link.label}” volta para as contas a pagar, e o dinheiro volta para o caixa.`;
     case "statement":
       return link.charges > 0
         ? `A fatura ${link.label} volta a aberta, com ${link.charges === 1 ? "a cobrança que estava" : `as ${link.charges} cobranças que estavam`} dentro dela.`

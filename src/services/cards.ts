@@ -146,6 +146,10 @@ export async function getCards(ctx: AppContext, month: RefMonth): Promise<CardsR
        where sc.user_id = ${ctx.userId}
          and sc.statement_id is not null
          and sc.status <> 'skipped'
+         -- So' a cobranca que AINDA nao caiu. A que caiu virou lancamento
+         -- (db/materialize.postDueCharges) e ja' esta' contada acima; somar as
+         -- duas pontas cobraria a assinatura em dobro na fatura.
+         and sc.transaction_id is null
     )
     select c.id as card_id,
            coalesce(sum(i.cents) filter (

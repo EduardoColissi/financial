@@ -198,7 +198,7 @@ async function main() {
 
     // ── materializa os meses usando o MESMO codigo da aplicacao ────────────
     for (let i = -5; i <= 1; i++) {
-      await materializeMonth(db, { userId }, addMonths(MONTH, i));
+      await materializeMonth(db, { userId, today: todayInTimeZone(SEED_TZ) }, addMonths(MONTH, i));
     }
 
     // ── lancamentos do mes corrente ────────────────────────────────────────
@@ -246,10 +246,6 @@ async function main() {
       return row?.id ?? null;
     };
 
-    const spentByCategory = new Map<string, number>();
-    const addSpent = (cat: string, cents: number) =>
-      spentByCategory.set(cat, (spentByCategory.get(cat) ?? 0) + cents);
-
     for (const e of ONE_OFF_EXPENSES) {
       const onCredit = "card" in e && e.card;
       const date = onCredit ? CREDIT_DATE : CASH_DATE;
@@ -267,7 +263,6 @@ async function main() {
         statementId: onCredit ? await statementFor(e.card, date) : null,
         settledOn: onCredit ? null : date,
       });
-      addSpent(e.category, e.amountCents);
     }
 
     // Aluguel: unica conta que ja' venceu, no dia 1.
@@ -284,7 +279,6 @@ async function main() {
       settledOn: CASH_DATE,
       source: "recurring",
     });
-    addSpent("Moradia", 220000);
 
     /**
      * Complemento por categoria.
@@ -292,9 +286,24 @@ async function main() {
      * As 15 transacoes do design nao somam os `real` das categorias (achado 5):
      * os agregados batem entre si, o detalhe nao. Sem fechar a diferenca aqui,
      * a tela nunca bate com o design e o QA nao tem baseline.
+     *
+     * O gasto ja' lancado vem do BANCO, nao de um contador em memoria: parte
+     * dele nao passa por este script. As assinaturas e parcelas do cartao que ja'
+     * cairam viram lancamento dentro da materializacao (`postDueCharges`), e um
+     * contador que so' somasse o que o seed insere as ignoraria — cada categoria
+     * fecharia acima do `real` do design, e o total do mes estouraria junto.
      */
+    const gasto = await db.execute<{ category_id: string; total: string }>(sql`
+      select category_id, sum(amount_cents)::text as total
+        from transactions
+       where user_id = ${userId} and competence_month = ${COMPETENCE}
+         and kind = 'expense' and category_id is not null
+       group by category_id
+    `);
+    const spentByCategory = new Map(gasto.rows.map((r) => [r.category_id, Number(r.total)]));
+
     for (const c of CATEGORIES) {
-      const diff = c.realCents - (spentByCategory.get(c.name) ?? 0);
+      const diff = c.realCents - (spentByCategory.get(categoryIds.get(c.name) ?? "") ?? 0);
       if (diff <= 0) continue;
       await db.insert(schema.transactions).values({
         userId,

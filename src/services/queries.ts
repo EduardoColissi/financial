@@ -80,10 +80,11 @@ export function methodLabel(method: string): string {
  */
 function linkOf(r: {
   chargeName: string | null;
+  chargeOnCard: boolean | null;
   statementCard: string | null;
   statementCharges: number;
 }): EntryLink {
-  if (r.chargeName) return { kind: "charge", label: r.chargeName };
+  if (r.chargeName) return { kind: "charge", label: r.chargeName, onCard: r.chargeOnCard === true };
   if (r.statementCard) {
     return {
       kind: "statement",
@@ -132,6 +133,12 @@ export async function getTransactions(
        */
       chargeName: sql<string | null>`(
         select r.name from scheduled_charges sc
+          join recurring_rules r on r.id = sc.rule_id
+         where sc.transaction_id = ${transactions.id} limit 1)`,
+      // Cobranca de cartao e cobranca em conta desfazem de jeitos opostos, e a
+      // tela precisa dizer qual dos dois antes de o botao ser clicado.
+      chargeOnCard: sql<boolean | null>`(
+        select r.card_id is not null from scheduled_charges sc
           join recurring_rules r on r.id = sc.rule_id
          where sc.transaction_id = ${transactions.id} limit 1)`,
       statementCard: sql<string | null>`(

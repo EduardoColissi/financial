@@ -183,7 +183,7 @@ export async function statementIdFor(ctx: AppContext, card: NonNullable<Card>, o
     on
   );
   // Comprar num mes ainda nao aberto na tela e' normal — a fatura precisa existir.
-  await materializeMonth(db, { userId: ctx.userId }, cycle.refMonth);
+  await materializeMonth(db, { userId: ctx.userId, today: ctx.today }, cycle.refMonth);
 
   const row = await db.query.cardStatements.findFirst({
     where: and(
@@ -294,7 +294,7 @@ async function createRule(
 
   // Cria a ocorrencia do primeiro mes usando o MESMO codigo da aplicacao — nada
   // de uma segunda implementacao da geracao aqui dentro.
-  await materializeMonth(db, { userId: ctx.userId }, plan.firstRefMonth);
+  await materializeMonth(db, { userId: ctx.userId, today: ctx.today }, plan.firstRefMonth);
 
   const charge = await db.query.scheduledCharges.findFirst({
     where: and(
@@ -343,6 +343,25 @@ async function createRule(
             : {}),
         })
         .where(eq(scheduledCharges.id, charge.id));
+
+      /*
+       * A materializacao acima ja' pode ter posto a primeira cobranca na fatura
+       * COMO LANCAMENTO (`postDueCharges`), e ela nasceu com o valor base da
+       * regra. Numa parcela com resto — R$ 100 em 3x — o valor certo da primeira
+       * e' outro, e sem esta correcao a fatura cobraria um centavo a menos do
+       * que a aba de parcelas promete.
+       */
+      if (charge.transactionId) {
+        await tx
+          .update(transactions)
+          .set({ amountCents: firstAmount, updatedAt: new Date() })
+          .where(
+            and(
+              eq(transactions.id, charge.transactionId),
+              eq(transactions.userId, ctx.userId)
+            )
+          );
+      }
     }
 
     await writeAudit(

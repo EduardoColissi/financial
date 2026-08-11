@@ -18,7 +18,7 @@ import { categoryKindOf, type EntryMethod, type EntryType, methodsFor } from "@/
 import { firstDayOf, monthOf, type PlainDate, plainDate } from "@/domain/period";
 import type { AppContext } from "./context";
 import { EntryError, statementIdFor } from "./entries";
-import { reopenCharge, reopenStatement } from "./payments";
+import { reopenCharge, reopenStatement, skipCharge } from "./payments";
 
 /**
  * Editar e apagar um lancamento ja' gravado.
@@ -36,7 +36,10 @@ import { reopenCharge, reopenStatement } from "./payments";
 /** O vinculo mais os ids que o servico precisa para desfaze-lo. */
 interface Dependentes {
   link: EntryLink;
+  /** Cobrancas em conta: o lancamento e' a quitacao, e apagar reabre. */
   chargeIds: string[];
+  /** Cobrancas no cartao: apagar diz "nao aconteceu", e a cobranca e' pulada. */
+  cardChargeIds: string[];
   statementId: string | null;
 }
 
@@ -45,7 +48,11 @@ async function dependentesDe(
   row: { id: string; kind: string; competenceMonth: string }
 ): Promise<Dependentes> {
   const cobrancas = await db
-    .select({ id: scheduledCharges.id, nome: recurringRules.name })
+    .select({
+      id: scheduledCharges.id,
+      nome: recurringRules.name,
+      noCartao: sql<boolean>`${recurringRules.cardId} is not null`,
+    })
     .from(scheduledCharges)
     .innerJoin(recurringRules, eq(recurringRules.id, scheduledCharges.ruleId))
     .where(
@@ -55,8 +62,9 @@ async function dependentesDe(
   const primeira = cobrancas[0];
   if (primeira) {
     return {
-      link: { kind: "charge", label: primeira.nome },
-      chargeIds: cobrancas.map((c) => c.id),
+      link: { kind: "charge", label: primeira.nome, onCard: primeira.noCartao },
+      chargeIds: cobrancas.filter((c) => !c.noCartao).map((c) => c.id),
+      cardChargeIds: cobrancas.filter((c) => c.noCartao).map((c) => c.id),
       statementId: null,
     };
   }
@@ -80,6 +88,7 @@ async function dependentesDe(
     return {
       link: { kind: "statement", label: fatura.nome, charges: Number(dentro?.n ?? 0) },
       chargeIds: [],
+      cardChargeIds: [],
       statementId: fatura.id,
     };
   }
@@ -92,7 +101,7 @@ async function dependentesDe(
    * aporte APONTA para o setor e nao ha' segunda copia: e' linha solta como
    * qualquer outra, e editar o valor corrige o setor no mesmo ato.
    */
-  return { link: { kind: "none" }, chargeIds: [], statementId: null };
+  return { link: { kind: "none" }, chargeIds: [], cardChargeIds: [], statementId: null };
 }
 
 export interface EntryForEdit {
@@ -270,9 +279,28 @@ export async function updateEntry(
     if (link.kind === "charge") {
       await tx
         .update(scheduledCharges)
-        .set({ amountCents: valor, amountOverridden: true, paidOn: cmd.occurredOn })
+        .set({ amountCents: valor, amountOverridden: true })
         .where(
           and(eq(scheduledCharges.transactionId, id), eq(scheduledCharges.userId, ctx.userId))
+        );
+
+      /*
+       * A data do pagamento so' existe onde houve pagamento.
+       *
+       * A cobranca de cartao que caiu na fatura tem lancamento e continua
+       * PENDENTE — quem a quita e' a fatura. Escrever `paid_on` nela violaria
+       * `occ_paid_ck`, que amarra a data ao status: o banco recusaria a edicao
+       * inteira de uma assinatura so' porque a descricao mudou.
+       */
+      await tx
+        .update(scheduledCharges)
+        .set({ paidOn: cmd.occurredOn })
+        .where(
+          and(
+            eq(scheduledCharges.transactionId, id),
+            eq(scheduledCharges.userId, ctx.userId),
+            eq(scheduledCharges.status, "paid")
+          )
         );
     }
     if (link.kind === "statement" && faturaId) {
@@ -314,10 +342,14 @@ export async function deleteEntry(ctx: AppContext, id: string): Promise<void> {
   });
   if (!row) throw new EntryError("id", "Lançamento não encontrado.");
 
-  const { chargeIds, statementId } = await dependentesDe(ctx, row);
+  const { chargeIds, cardChargeIds, statementId } = await dependentesDe(ctx, row);
 
   await db.transaction(async (tx) => {
     for (const chargeId of chargeIds) await reopenCharge(tx, ctx, chargeId);
+    // No cartao a cobranca e' PULADA, nao reaberta. Devolve-la ao pendente faria
+    // a proxima abertura do mes gerar o lancamento de novo, e o gasto que o dono
+    // acabou de apagar reapareceria sozinho.
+    for (const chargeId of cardChargeIds) await skipCharge(tx, ctx, chargeId);
     if (statementId) await reopenStatement(tx, ctx, statementId);
 
     await tx

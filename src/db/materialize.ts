@@ -2,7 +2,14 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { cycleFor, cycleOfRefMonth } from "@/domain/card-cycle";
 import { isActiveIn, sequenceFor } from "@/domain/installments";
-import { clampDay, firstDayOf, plainDate, type RefMonth, refMonth } from "@/domain/period";
+import {
+  clampDay,
+  firstDayOf,
+  type PlainDate,
+  plainDate,
+  type RefMonth,
+  refMonth,
+} from "@/domain/period";
 import type * as schema from "./schema";
 import { cardStatements, creditCards, recurringRules, scheduledCharges } from "./schema";
 
@@ -32,11 +39,17 @@ export type Database = NodePgDatabase<typeof schema>;
 
 export interface MaterializeTarget {
   userId: string;
+  /**
+   * Hoje, no fuso do usuario. E' o que separa a cobranca que JA' caiu na fatura
+   * da que ainda vai cair — e so' a que caiu vira lancamento.
+   */
+  today: PlainDate;
 }
 
 export interface MaterializeResult {
   statementsCreated: number;
   chargesCreated: number;
+  entriesPosted: number;
 }
 
 function lockKey(userId: string, month: RefMonth): string {
@@ -55,8 +68,9 @@ export async function materializeMonth(
     const statementsCreated = await buildStatements(tx as Database, target, month);
     const chargesCreated = await buildCharges(tx as Database, target, month);
     await linkChargesToStatements(tx as Database, target);
+    const entriesPosted = await postDueCharges(tx as Database, target);
 
-    return { statementsCreated, chargesCreated };
+    return { statementsCreated, chargesCreated, entriesPosted };
   });
 }
 
@@ -167,7 +181,9 @@ async function buildCharges(
  */
 export async function linkChargesToStatements(
   db: Database,
-  target: MaterializeTarget
+  // Só o dono: religar cobranca a fatura nao depende de que dia e' hoje, e o
+  // script de reparo chama isto sem ter um relogio por perto.
+  target: Pick<MaterializeTarget, "userId">
 ): Promise<void> {
   const orphans = await db
     .select({
@@ -225,4 +241,95 @@ export async function linkChargesToStatements(
        and rr.card_id is not null
        and sc.due_date between st.period_start and st.period_end
   `);
+}
+
+/**
+ * Transforma em LANCAMENTO a cobranca de cartao que ja' caiu.
+ *
+ * Sem isto a assinatura e a parcela no cartao viviam so' em `scheduled_charges`:
+ * entravam no total da fatura e sumiam de todo o resto. Nao contavam para a
+ * categoria, nao apareciam na lista de lancamentos e nao somavam na despesa do
+ * mes — nem quando a fatura era paga, porque o pagamento e' um `transfer` sem
+ * categoria. Uma Netflix lancada em setembro simplesmente nao existia para o
+ * orcamento, em mes nenhum.
+ *
+ * A compra avulsa no credito sempre gravou lancamento (ver
+ * `services/entries.createSingleTransaction`); a cobranca de regra passa a
+ * gravar o mesmo, pelo mesmo motivo e com os mesmos campos. A cobranca segue
+ * sendo a AGENDA — quando ela cai, quanto vai ser, de que regra veio —, e o
+ * lancamento passa a ser o dinheiro.
+ *
+ * Nasce quando a cobranca cai (`due_date <= hoje`), nao quando ela e' gerada: o
+ * que ainda vai ser cobrado e' previsao, e previsao inflaria o gasto do mes.
+ * Competencia e' o mes da COBRANCA, nao o da fatura — a mesma regra da compra no
+ * credito.
+ *
+ * Varre TODOS os meses, nao so' o recem-materializado, pelo motivo de
+ * `linkChargesToStatements`: e' o que resgata a cobranca que caiu num mes que
+ * ninguem abriu.
+ *
+ * Idempotencia: `external_id = 'charge:<id>'` sob o UNIQUE `tx_external_uq`.
+ * Duas materializacoes simultaneas de meses diferentes competem pela mesma
+ * cobranca; o indice — nao o `where` — e' o que garante um lancamento so'.
+ */
+export async function postDueCharges(db: Database, target: MaterializeTarget): Promise<number> {
+  /*
+   * Uma instrucao so': o `returning` do insert alimenta o vinculo.
+   *
+   * Em duas, o lancamento poderia existir com a cobranca ainda apontando para o
+   * nada — e a passagem seguinte, vendo `transaction_id is null`, tentaria criar
+   * tudo de novo. E' a mesma cobranca contada duas vezes na fatura, que e'
+   * exatamente o defeito que este codigo existe para evitar.
+   */
+  const ligadas = await db.execute<{ id: string }>(sql`
+    with novo as (
+      insert into transactions (
+        user_id, kind, occurred_on, competence_month, description, amount_cents,
+        category_id, method, card_id, statement_id,
+        installment_seq, installment_total, source, external_id
+      )
+      select sc.user_id,
+             'expense',
+             sc.due_date,
+             sc.ref_month,
+             rr.name,
+             sc.amount_cents,
+             rr.category_id,
+             -- tx_card_method_ck casa cartao com o meio "credito"; a regra pode
+             -- ter sido cadastrada com outro meio, e o banco recusaria a linha.
+             'credit',
+             rr.card_id,
+             sc.statement_id,
+             -- Os dois juntos ou nenhum, e a sequencia dentro do total: e' o que
+             -- tx_installment_ck exige. Dado torto vira lancamento sem rotulo de
+             -- parcela em vez de derrubar a materializacao inteira.
+             case when sc.sequence between 1 and rr.installments_total
+                  then sc.sequence end,
+             case when sc.sequence between 1 and rr.installments_total
+                  then rr.installments_total end,
+             'recurring',
+             'charge:' || sc.id
+        from scheduled_charges sc
+        join recurring_rules rr on rr.id = sc.rule_id
+       where sc.user_id = ${target.userId}
+         and rr.card_id is not null
+         and sc.statement_id is not null
+         and sc.transaction_id is null
+         and sc.status <> 'skipped'
+         and sc.due_date <= ${target.today}
+         -- tx_amount_ck exige valor positivo. Cobranca variavel sem estimativa
+         -- nasce zerada e continua so' na agenda ate' alguem digitar o valor.
+         and sc.amount_cents > 0
+      on conflict do nothing
+      returning id, external_id
+    )
+    update scheduled_charges sc
+       set transaction_id = novo.id
+      from novo
+     where novo.external_id = 'charge:' || sc.id
+       and sc.user_id = ${target.userId}
+    returning sc.id
+  `);
+
+  return ligadas.rows.length;
 }

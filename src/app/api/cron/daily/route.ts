@@ -53,7 +53,7 @@ export async function GET(request: Request) {
     // momento em que adiantar trabalho realmente ajuda.
     const months = [current, addMonths(current, 1)];
     for (const month of months) {
-      await materializeMonth(db, { userId: row.id }, month);
+      await materializeMonth(db, { userId: row.id, today }, month);
     }
     processed.push({ userId: row.id, months });
   }

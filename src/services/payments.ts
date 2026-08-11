@@ -37,6 +37,23 @@ export async function reopenCharge(tx: DbTx, ctx: AppContext, chargeId: string):
 }
 
 /**
+ * Marca a cobranca como pulada: ela nao aconteceu neste mes.
+ *
+ * E' o desfazer da cobranca de CARTAO. Ela nunca foi paga sozinha — caiu na
+ * fatura e virou lancamento —, entao nao ha' pagamento para reabrir; o que se
+ * apaga e' a ocorrencia do mes. `skipped` a tira do total da fatura e, por ser
+ * um estado gravado, impede que a proxima materializacao a gere de novo.
+ *
+ * A regra continua viva: o mes que vem tem a cobranca normalmente.
+ */
+export async function skipCharge(tx: DbTx, ctx: AppContext, chargeId: string): Promise<void> {
+  await tx
+    .update(scheduledCharges)
+    .set({ status: "skipped", paidOn: null, transactionId: null })
+    .where(and(eq(scheduledCharges.id, chargeId), eq(scheduledCharges.userId, ctx.userId)));
+}
+
+/**
  * Reabre uma fatura e devolve ao aberto as cobrancas que estavam dentro dela.
  *
  * As duas coisas andam juntas: `payStatement` quitou as cobrancas junto com a
@@ -136,6 +153,15 @@ export async function unpayCharge(ctx: AppContext, chargeId: string): Promise<vo
       where: (t, { and: a, eq: e }) => a(e(t.id, chargeId), e(t.userId, ctx.userId)),
     });
     if (cobranca?.status !== "paid") return;
+    /*
+     * Cobranca de fatura nao passa por aqui, pelo mesmo motivo de `payCharge` —
+     * e agora com um estrago maior: ela esta' paga porque a FATURA foi paga, e o
+     * `transaction_id` dela aponta para o lancamento da assinatura, nao para
+     * nenhum pagamento. Apagar aquilo tiraria a compra da fatura ja' quitada.
+     */
+    if (cobranca.statementId) {
+      throw new PaymentError("Esta cobrança foi paga com a fatura — reabra a fatura.");
+    }
 
     await reopenCharge(tx, ctx, chargeId);
 
@@ -162,10 +188,26 @@ export async function setChargeAmount(
   amountCents: Cents
 ): Promise<void> {
   if (amountCents < 0) throw new PaymentError("Valor não pode ser negativo.");
-  await db
-    .update(scheduledCharges)
-    .set({ amountCents, amountOverridden: true })
-    .where(and(eq(scheduledCharges.id, chargeId), eq(scheduledCharges.userId, ctx.userId)));
+
+  await db.transaction(async (tx) => {
+    const [cobranca] = await tx
+      .update(scheduledCharges)
+      .set({ amountCents, amountOverridden: true })
+      .where(and(eq(scheduledCharges.id, chargeId), eq(scheduledCharges.userId, ctx.userId)))
+      .returning({ transactionId: scheduledCharges.transactionId });
+
+    // A cobranca que ja' virou lancamento tem o valor em dois lugares. Corrigir
+    // so' um faria a aba de assinaturas e a fatura discordarem — e e' a fatura
+    // que manda no que vai ser debitado.
+    if (cobranca?.transactionId) {
+      await tx
+        .update(transactions)
+        .set({ amountCents, updatedAt: new Date() })
+        .where(
+          and(eq(transactions.id, cobranca.transactionId), eq(transactions.userId, ctx.userId))
+        );
+    }
+  });
 }
 
 // ── fatura ───────────────────────────────────────────────────────────────────
@@ -189,7 +231,9 @@ export async function statementTotal(ctx: AppContext, statementId: string): Prom
                    and source <> 'card_payment'), 0)
       + coalesce((select sum(amount_cents) from scheduled_charges
                    where statement_id = ${statementId} and user_id = ${ctx.userId}
-                     and status <> 'skipped'), 0)
+                     and status <> 'skipped'
+                     -- A que ja' caiu virou lancamento e entrou na soma acima.
+                     and transaction_id is null), 0)
     )::text as total
   `);
   return cents(Number(rows[0]?.total ?? 0));

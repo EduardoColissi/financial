@@ -1,6 +1,7 @@
 import "server-only";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
+import { linkChargesToStatements, resyncCardStatements } from "@/db/materialize";
 import {
   accounts,
   cardStatements,
@@ -166,7 +167,20 @@ export async function createCard(ctx: AppContext, draft: CardDraft): Promise<str
   });
 }
 
+/**
+ * Editar o cartao pode mudar o CICLO — e o ciclo ja' esta' gravado nas faturas.
+ *
+ * Trocar o dia de fechamento nao e' renomear: as faturas materializadas
+ * descrevem o ciclo antigo e continuariam a descrever, porque `buildStatements`
+ * so' insere o que falta. O cartao dizia "fecha dia 1" e a fatura de agosto
+ * seguia cobrindo 09/07 a 08/08 — a compra do dia 08 caia nela, um mes antes de
+ * onde o cartao manda. Por isso a edicao realinha o que ainda nao foi pago.
+ */
 export async function updateCard(ctx: AppContext, id: string, draft: CardDraft): Promise<void> {
+  const anterior = await db.query.creditCards.findFirst({
+    where: and(eq(creditCards.id, id), eq(creditCards.userId, ctx.userId)),
+  });
+
   const alterados = await comNomeUnico("um cartão", async () =>
     db
       .update(creditCards)
@@ -184,6 +198,17 @@ export async function updateCard(ctx: AppContext, id: string, draft: CardDraft):
       .returning({ id: creditCards.id })
   );
   if (alterados.length === 0) throw new RegistryError("name", "Cartão não encontrado.");
+
+  const mudouCiclo =
+    anterior != null &&
+    (anterior.closingDay !== draft.closingDay || anterior.dueDay !== draft.dueDay);
+
+  if (mudouCiclo) {
+    await resyncCardStatements(db, { userId: ctx.userId }, id);
+    // Cobranca que ficou sem fatura no realinhamento — a data pode ter passado
+    // a pedir uma fatura que ninguem criou ainda.
+    await linkChargesToStatements(db, { userId: ctx.userId });
+  }
 }
 
 export async function deleteCard(ctx: AppContext, id: string): Promise<void> {

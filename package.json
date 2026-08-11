@@ -24,7 +24,8 @@
     "db:studio": "drizzle-kit studio",
     "db:check-constraints": "tsx scripts/check-constraints.ts",
     "db:check-materialize": "tsx scripts/check-materialize.ts",
-    "db:check-links": "tsx scripts/check-statement-links.ts"
+    "db:check-links": "tsx scripts/check-statement-links.ts",
+    "db:resync-cards": "tsx scripts/resync-cards.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

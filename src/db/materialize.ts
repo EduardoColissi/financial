@@ -1,6 +1,8 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { cycleFor, cycleOfRefMonth } from "@/domain/card-cycle";
+// `resyncCardStatements` reusa o MESMO `cycleOfRefMonth` que gera a fatura em
+// `buildStatements` — dois caminhos para o mesmo periodo divergiriam.
 import { isActiveIn, sequenceFor } from "@/domain/installments";
 import {
   clampDay,
@@ -240,6 +242,166 @@ export async function linkChargesToStatements(
        and sc.statement_id is null
        and rr.card_id is not null
        and sc.due_date between st.period_start and st.period_end
+  `);
+}
+
+/**
+ * Realinha as faturas de um cartao ao ciclo que ele tem HOJE.
+ *
+ * Existe porque o dia de fechamento e' editavel e as faturas ja' materializadas
+ * nao acompanhavam. Um cartao que fechava dia 9 e passou a fechar dia 1 ficava
+ * com meses inteiros de fatura descrevendo o ciclo antigo — e a partir dai' os
+ * dois caminhos que acham fatura discordavam: a compra avulsa resolve pelo
+ * ciclo atual (`statementIdFor` chama `cycleFor`), e a cobranca de regra resolve
+ * pela DATA dentro do periodo gravado. Uma compra e uma parcela do mesmo dia
+ * caiam em faturas diferentes, e so' a parcela parecia errada.
+ *
+ * Idempotente e derivado do cartao, nunca de um deslocamento fixo: rodar duas
+ * vezes da' o mesmo resultado, e o resultado nao depende de quando a fatura foi
+ * criada nem de que convencao valia na epoca.
+ *
+ * Fatura PAGA fica como esta'. Ela e' historico — o dinheiro ja' saiu por aquele
+ * recorte, e reescrever o periodo mudaria o que aquele pagamento cobriu.
+ */
+export async function resyncCardStatements(
+  db: Database,
+  target: Pick<MaterializeTarget, "userId">,
+  cardId?: string
+): Promise<number> {
+  const cards = await db
+    .select()
+    .from(creditCards)
+    .where(
+      cardId
+        ? and(eq(creditCards.userId, target.userId), eq(creditCards.id, cardId))
+        : eq(creditCards.userId, target.userId)
+    );
+
+  let corrigidas = 0;
+
+  for (const card of cards) {
+    const config = {
+      closingDay: card.closingDay,
+      dueDay: card.dueDay,
+      bestDayOverride: card.bestDayOverride,
+    };
+
+    const statements = await db
+      .select()
+      .from(cardStatements)
+      .where(and(eq(cardStatements.cardId, card.id), eq(cardStatements.userId, target.userId)));
+
+    for (const st of statements) {
+      if (st.status === "paid") continue;
+
+      const cycle = cycleOfRefMonth(config, refMonth(st.refMonth.slice(0, 7)));
+      if (
+        st.periodStart === cycle.periodStart &&
+        st.periodEnd === cycle.periodEnd &&
+        st.dueDate === cycle.dueDate
+      ) {
+        continue;
+      }
+
+      await db
+        .update(cardStatements)
+        .set({
+          periodStart: cycle.periodStart,
+          periodEnd: cycle.periodEnd,
+          dueDate: cycle.dueDate,
+        })
+        .where(eq(cardStatements.id, st.id));
+      corrigidas++;
+    }
+  }
+
+  if (corrigidas > 0) await relinkToCurrentPeriods(db, target);
+  return corrigidas;
+}
+
+/**
+ * Devolve cada cobranca, cada compra e cada competencia a' fatura que a data
+ * pede — depois que os periodos mudaram debaixo delas.
+ *
+ * A ordem e' a mesma da migration que fez este reparo pela primeira vez, e pelo
+ * mesmo motivo: a cobranca primeiro, porque o lancamento dela e' derivado; a
+ * competencia por ultimo, porque ela sai da fatura ja' corrigida.
+ */
+async function relinkToCurrentPeriods(
+  db: Database,
+  target: Pick<MaterializeTarget, "userId">
+): Promise<void> {
+  // A cobranca que saiu do periodo da sua fatura procura a que cobre a data.
+  // Sem nenhuma, fica orfa: `linkChargesToStatements` cria a fatura que falta.
+  await db.execute(sql`
+    update scheduled_charges sc
+       set statement_id = (
+             select st.id
+               from card_statements st
+               join recurring_rules rr on rr.id = sc.rule_id
+              where st.card_id = rr.card_id
+                and st.user_id = sc.user_id
+                and sc.due_date between st.period_start and st.period_end
+              limit 1
+           )
+     where sc.user_id = ${target.userId}
+       and sc.statement_id is not null
+       and not exists (
+             select 1 from card_statements st
+              where st.id = sc.statement_id
+                and sc.due_date between st.period_start and st.period_end
+           )
+  `);
+
+  // O lancamento nascido de cobranca segue a cobranca: ele nao tem caminho
+  // proprio de reparo, `postDueCharges` so' cria o que ainda nao existe.
+  await db.execute(sql`
+    update transactions t
+       set statement_id = sc.statement_id
+      from scheduled_charges sc
+     where sc.transaction_id = t.id
+       and sc.user_id = t.user_id
+       and sc.statement_id is not null
+       and t.statement_id is distinct from sc.statement_id
+  `);
+
+  // Compra avulsa no credito, pela data da compra. O `coalesce` e' rede: sem
+  // fatura para a data ela fica onde esta', porque lancamento sem fatura sumiria
+  // do total do cartao.
+  await db.execute(sql`
+    update transactions t
+       set statement_id = coalesce(
+             (select st.id
+                from card_statements st
+               where st.card_id = t.card_id
+                 and st.user_id = t.user_id
+                 and t.occurred_on between st.period_start and st.period_end
+               limit 1),
+             t.statement_id
+           )
+     where t.user_id = ${target.userId}
+       and t.card_id is not null
+       and t.statement_id is not null
+       and t.source <> 'card_payment'
+       and not exists (
+             select 1 from card_statements st
+              where st.id = t.statement_id
+                and t.occurred_on between st.period_start and st.period_end
+           )
+  `);
+
+  // Competencia do credito = mes da fatura. O pagamento da fatura fica de fora:
+  // ele ja' nasce com o mes dela e nao e' despesa.
+  await db.execute(sql`
+    update transactions t
+       set competence_month = st.ref_month
+      from card_statements st
+     where st.id = t.statement_id
+       and st.user_id = t.user_id
+       and t.user_id = ${target.userId}
+       and t.kind = 'expense'
+       and t.source <> 'card_payment'
+       and t.competence_month is distinct from st.ref_month
   `);
 }
 

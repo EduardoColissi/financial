@@ -17,7 +17,7 @@ import {
   planEntry,
   previewOf,
 } from "@/domain/new-entry";
-import { type PlainDate, plainDate } from "@/domain/period";
+import { monthLabel, type PlainDate, parseMonthParam, plainDate } from "@/domain/period";
 import { cx } from "@/lib/cx";
 import { centsFromDigits, maskBRL, onlyDigits } from "@/lib/money-mask";
 import type { EntryFormOptions } from "@/services/entry-form";
@@ -58,7 +58,12 @@ function Dialog({ options }: { options: EntryFormOptions }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const ref = useRef<HTMLDialogElement>(null);
+  const amountRef = useRef<HTMLInputElement>(null);
   const [state, formAction, pending] = useActionState(createEntryAction, INITIAL);
+
+  // O mes que esta' na tela (`/2026-08/lancamentos`). Vai junto no formulario
+  // para o redirect trocar de aba sem tirar o usuario do mes que ele confere.
+  const mesNaTela = parseMonthParam(pathname.split("/")[1]);
 
   const firstAccount = options.accounts[0];
   const firstCard = options.cards[0];
@@ -85,6 +90,23 @@ function Dialog({ options }: { options: EntryFormOptions }) {
     const el = ref.current;
     if (el && !el.open) el.showModal();
   }, []);
+
+  /*
+   * "Lançar mais" gravou: esvazia o que muda de um lancamento para o outro e
+   * deixa de pe' o que costuma se repetir — tipo, meio, alvo, categoria e data.
+   * Zerar tudo obrigaria a remontar o contexto inteiro a cada linha, que e'
+   * justamente o trabalho que o botao existe para poupar.
+   *
+   * `state.saved` e' objeto novo a cada gravacao, entao duas iguais em sequencia
+   * disparam o efeito duas vezes.
+   */
+  useEffect(() => {
+    if (!state.saved) return;
+    setAmount("");
+    setDescription("");
+    setInstallments(1);
+    amountRef.current?.focus();
+  }, [state.saved]);
 
   function close() {
     const next = new URLSearchParams(params.toString());
@@ -157,6 +179,15 @@ function Dialog({ options }: { options: EntryFormOptions }) {
         })
       : null;
 
+  // A mesma condicao nos dois botoes de submit: gravar por um caminho e nao
+  // pelo outro seria o tipo de diferenca que ninguem percebe ate' gravar torto.
+  const naoDaParaSalvar = pending || !plan || !categoryId || !target;
+
+  const mesDoLancamento = (() => {
+    const m = state.saved ? parseMonthParam(state.saved.month) : null;
+    return m ? monthLabel(m) : "";
+  })();
+
   const labels = {
     categoryName: porSetor
       ? (options.sectors.find((x) => x.id === sectorId)?.name ?? null)
@@ -224,6 +255,7 @@ function Dialog({ options }: { options: EntryFormOptions }) {
                   R$
                 </span>
                 <input
+                  ref={amountRef}
                   id="novo-valor"
                   name="amount"
                   className={s.amountInput}
@@ -381,6 +413,18 @@ function Dialog({ options }: { options: EntryFormOptions }) {
 
           {state.ok ? null : <p className={s.error}>{state.error}</p>}
 
+          {/*
+            O modal nao fecha no "Lançar mais", entao esta linha e' o unico
+            recibo da gravacao — e diz o mes quando ele nao e' o da tela, que e'
+            o caso de toda compra no credito depois do fechamento.
+          */}
+          {state.saved ? (
+            <p className={s.saved} role="status">
+              Gravado: {state.saved.description}
+              {state.saved.month === mesNaTela ? "" : ` · aparece em ${mesDoLancamento}`}
+            </p>
+          ) : null}
+
           <p className={cx(s.preview, !plan && s.previewEmpty)}>
             {plan ? previewOf(plan, labels) : "preencha o valor para ver a prévia"}
           </p>
@@ -392,6 +436,7 @@ function Dialog({ options }: { options: EntryFormOptions }) {
         <input type="hidden" name="categoryId" value={porSetor ? "" : categoryId} />
         <input type="hidden" name="sectorId" value={porSetor ? sectorId : ""} />
         {repeats && installments === 1 ? <input type="hidden" name="repeats" value="on" /> : null}
+        {mesNaTela ? <input type="hidden" name="currentMonth" value={mesNaTela} /> : null}
 
         <div className={s.foot}>
           <span className={s.hint}>
@@ -401,11 +446,23 @@ function Dialog({ options }: { options: EntryFormOptions }) {
             <button type="button" className={s.cancel} onClick={close}>
               Cancelar
             </button>
+            {/*
+              Mesmo submit, com uma bandeira a mais: e' o `keepOpen` que faz a
+              action devolver estado em vez de redirecionar. Dois formularios ou
+              um fetch a' parte dariam dois caminhos de gravacao para a mesma
+              coisa — e um deles acabaria divergindo.
+            */}
             <button
               type="submit"
-              className={s.save}
-              disabled={pending || !plan || !categoryId || !target}
+              name="keepOpen"
+              value="1"
+              className={s.more}
+              disabled={naoDaParaSalvar}
+              title="Grava e mantém o modal aberto para o próximo"
             >
+              Lançar mais
+            </button>
+            <button type="submit" className={s.save} disabled={naoDaParaSalvar}>
               {pending ? "Salvando…" : "Salvar lançamento"}
             </button>
           </div>

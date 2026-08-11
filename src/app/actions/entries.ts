@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { MoneyError, parseBRL } from "@/domain/money";
-import { PeriodError, plainDate } from "@/domain/period";
+import { PeriodError, parseMonthParam, plainDate } from "@/domain/period";
 import { getContext } from "@/services/context";
 import { createEntry, EntryError } from "@/services/entries";
 import { deleteEntry, updateEntry } from "@/services/entry-edit";
@@ -28,6 +28,19 @@ export interface EntryFormState {
   error?: string;
   /** Campo que falhou, para destacar na UI. */
   field?: string;
+  /**
+   * O que acabou de ser gravado, quando o modal continua aberto.
+   *
+   * So' aparece no "Lançar mais": no salvar comum a action redireciona e este
+   * estado nunca chega a ser lido. E' o unico aviso de que a gravacao deu certo,
+   * ja' que o modal nao fecha para mostrar a lista.
+   */
+  saved?: {
+    description: string;
+    /** Mes em que ele aparece — pode nao ser o que esta' na tela. */
+    month: string;
+    slug: "lancamentos" | "contas" | "recorrentes";
+  };
 }
 
 const schema = z.object({
@@ -106,11 +119,32 @@ export async function createEntryAction(
   // mudam juntos quando entra dinheiro novo.
   revalidatePath("/[month]", "layout");
 
-  // Manda o usuario para onde o lancamento realmente foi parar — aba E mes. Um
-  // parcelamento nao aparece em "Lançamentos" (vira parcela na fatura ou conta a
-  // pagar), e no cartao pode aparecer no mes seguinte, que e' quando a fatura
-  // dele vence.
-  redirect(`/${result.landingMonth}/${result.landingSlug}`);
+  // "Lançar mais": nao navega, para o modal seguir aberto com os campos limpos.
+  if (formData.get("keepOpen") === "1") {
+    return {
+      ok: true,
+      saved: {
+        description: input.description,
+        month: result.landingMonth,
+        slug: result.landingSlug,
+      },
+    };
+  }
+
+  /*
+   * Troca de ABA, nunca de MES.
+   *
+   * Um parcelamento nao aparece em "Lançamentos" (vira parcela na fatura ou
+   * conta a pagar), entao a aba certa ainda vale a viagem. O mes, nao: desde que
+   * o gasto no credito passou a pesar no mes do vencimento, lancar uma compra de
+   * hoje jogava o painel para o mes seguinte — sair do mes que se esta'
+   * conferindo para ver uma linha e' pior do que nao ver a linha.
+   *
+   * `parseMonthParam` e' o que impede um `currentMonth` forjado de virar
+   * redirect para qualquer lugar; sem mes valido, cai no do lancamento.
+   */
+  const mesNaTela = parseMonthParam(String(formData.get("currentMonth") ?? ""));
+  redirect(`/${mesNaTela ?? result.landingMonth}/${result.landingSlug}`);
 }
 
 /**

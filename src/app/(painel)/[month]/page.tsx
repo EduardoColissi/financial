@@ -22,5 +22,14 @@ export default async function VisaoGeralPage({ params }: { params: Promise<{ mon
   // Sem "saldos em conta": no envelope mensal nao existe saldo por conta. A
   // conta e' rotulo de onde o dinheiro entrou, e o dinheiro e' usado em
   // conjunto — mostrar um saldo por conta sugeriria potes separados.
-  return <Overview data={data} categories={categories} latest={tx.rows.slice(0, 6)} cash={cash} />;
+  return (
+    <Overview
+      data={data}
+      categories={categories}
+      latest={tx.rows.slice(0, 6)}
+      cash={cash}
+      today={ctx.today}
+      timezone={ctx.timezone}
+    />
+  );
 }

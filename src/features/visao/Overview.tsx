@@ -11,7 +11,13 @@ import {
 import { StatusPill } from "@/components/ui/StatusPill";
 import { widthPercent } from "@/domain/math";
 import { brl, type Cents, cents, compactK, maxCents } from "@/domain/money";
-import { shortDate } from "@/domain/period";
+import {
+  dateInTimeZone,
+  daysBetween,
+  type PlainDate,
+  shortDate,
+  shortDateTime,
+} from "@/domain/period";
 import type { CashView } from "@/services/cash";
 import type { OverviewData } from "@/services/overview";
 import type { CategoriesResult, TransactionRow } from "@/services/queries";
@@ -22,11 +28,22 @@ export function Overview({
   categories,
   latest,
   cash,
+  today,
+  timezone,
 }: {
   data: OverviewData;
   categories: CategoriesResult;
   latest: TransactionRow[];
   cash: CashView;
+  /**
+   * "Hoje" e o fuso vem do contexto, nao do relogio do processo.
+   *
+   * A tela renderiza no servidor, e o servidor roda em UTC: medir "ha quantos
+   * dias" contra o relogio daqui faria o painel trocar de dia as 21h de
+   * Brasilia e mostrar hora adiantada em 3h no ultimo lancamento.
+   */
+  today: PlainDate;
+  timezone: string;
 }) {
   const maxFlow = Math.max(1, ...data.flow.map((m) => Math.max(m.incomeCents, m.expenseCents)));
 
@@ -112,9 +129,9 @@ export function Overview({
         />
         <HealthItem
           label="Último lançamento"
-          value={desdeQuando(data.lastEntryAt)}
-          note={data.lastEntryAt ? quandoExato(data.lastEntryAt) : "nada lançado ainda"}
-          alerta={precisaLancar(data.lastEntryAt)}
+          value={desdeQuando(data.lastEntryAt, today, timezone)}
+          note={data.lastEntryAt ? shortDateTime(data.lastEntryAt, timezone) : "nada lançado ainda"}
+          alerta={precisaLancar(data.lastEntryAt, today, timezone)}
         />
       </div>
 
@@ -362,28 +379,30 @@ function Kpi({
   );
 }
 
-/** "há 3 dias", "hoje" — o que se quer saber e' a distancia, nao a data. */
-function desdeQuando(at: Date | null): string {
-  if (!at) return "—";
-  const dias = Math.floor((Date.now() - at.getTime()) / 86_400_000);
+/**
+ * "há 3 dias", "hoje" — o que se quer saber e' a distancia, nao a data.
+ *
+ * A distancia e' contada em dias de calendario de Brasilia, nao em blocos de
+ * 24h: um lancamento das 22h de ontem e' "ontem" as 8h de hoje, ainda que
+ * tenham se passado 10 horas.
+ */
+function desdeQuando(at: Date | null, today: PlainDate, timezone: string): string {
+  const dias = diasSemLancar(at, today, timezone);
+  if (dias === null) return "—";
   if (dias <= 0) return "hoje";
   if (dias === 1) return "ontem";
   return `há ${dias} dias`;
 }
 
-function quandoExato(at: Date): string {
-  return at.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+/** Três dias sem lançar já é o bastante para o mês começar a mentir. */
+function precisaLancar(at: Date | null, today: PlainDate, timezone: string): boolean {
+  const dias = diasSemLancar(at, today, timezone);
+  return dias === null || dias > 3;
 }
 
-/** Três dias sem lançar já é o bastante para o mês começar a mentir. */
-function precisaLancar(at: Date | null): boolean {
-  if (!at) return true;
-  return Date.now() - at.getTime() > 3 * 86_400_000;
+function diasSemLancar(at: Date | null, today: PlainDate, timezone: string): number | null {
+  if (!at) return null;
+  return daysBetween(dateInTimeZone(at, timezone), today);
 }
 
 function HealthItem({

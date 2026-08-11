@@ -264,6 +264,17 @@ export function todayInTimeZone(timeZone: string = DEFAULT_TIME_ZONE): PlainDate
 }
 
 /**
+ * A data civil de um instante no fuso informado.
+ *
+ * `created_at` e' um instante absoluto (timestamptz). Um lancamento feito as
+ * 22h de Brasilia ja' e' o dia seguinte em UTC — sem passar por aqui, o painel
+ * diria "ontem" para algo lancado ha' uma hora.
+ */
+export function dateInTimeZone(at: Date, timeZone: string = DEFAULT_TIME_ZONE): PlainDate {
+  return plainDate(formatterFor(timeZone).format(at));
+}
+
+/**
  * O instante de agora, sem fuso envolvido.
  *
  * Existe para prazo de sessao e carimbo de tentativa de login — coisas medidas
@@ -295,6 +306,29 @@ export function monthLabel(month: RefMonth): string {
 export function shortDate(date: PlainDate): string {
   const { month, day } = partsOfDate(date);
   return `${pad2(day)}/${pad2(month)}`;
+}
+
+const stampInTz = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * "11/08 14:32" — instante formatado no relogio do usuario.
+ *
+ * Sem o `timeZone` explicito, `toLocaleString` usa o fuso do processo: a Vercel
+ * roda em UTC e o painel mostraria toda hora 3h adiantada.
+ */
+export function shortDateTime(at: Date, timeZone: string = DEFAULT_TIME_ZONE): string {
+  let f = stampInTz.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat("pt-BR", {
+      timeZone,
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    stampInTz.set(timeZone, f);
+  }
+  return f.format(at);
 }
 
 /** "01/08/2026" */

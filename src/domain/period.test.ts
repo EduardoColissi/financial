@@ -4,6 +4,7 @@ import {
   addMonths,
   clampDay,
   compareDates,
+  dateInTimeZone,
   daysBetween,
   daysInMonth,
   firstDayOf,
@@ -23,6 +24,7 @@ import {
   plainDate,
   refMonth,
   shortDate,
+  shortDateTime,
   todayInTimeZone,
   WEEKDAYS,
   weekdayOf,
@@ -150,6 +152,17 @@ describe("hoje", () => {
     expect(sp <= utc).toBe(true);
     expect(daysBetween(sp, utc)).toBeLessThanOrEqual(1);
   });
+
+  it("dateInTimeZone da' o dia civil de Brasilia, nao o de UTC", () => {
+    // 01/08 as 00h30 em UTC ainda e' 31/07 as 21h30 em Sao Paulo.
+    const virada = new Date("2026-08-01T00:30:00Z");
+    expect(dateInTimeZone(virada, "America/Sao_Paulo")).toBe("2026-07-31");
+    expect(dateInTimeZone(virada, "UTC")).toBe("2026-08-01");
+  });
+
+  it("dateInTimeZone assume Brasilia quando o fuso nao e' informado", () => {
+    expect(dateInTimeZone(new Date("2026-08-01T02:00:00Z"))).toBe("2026-07-31");
+  });
 });
 
 describe("rotulos", () => {
@@ -173,6 +186,14 @@ describe("rotulos", () => {
   it("monthOf e makeMonth sao consistentes", () => {
     expect(monthOf(d("2026-08-15"))).toBe("2026-08");
     expect(makeMonth(2026, 8)).toBe("2026-08");
+  });
+
+  it("shortDateTime mostra o relogio de Brasilia, nao o do processo", () => {
+    // A suite (e a Vercel) roda em UTC: sem `timeZone` sairia "01/08 00:30".
+    const at = new Date("2026-08-01T00:30:00Z");
+    expect(shortDateTime(at, "America/Sao_Paulo")).toBe("31/07, 21:30");
+    expect(shortDateTime(at)).toBe("31/07, 21:30");
+    expect(shortDateTime(at, "UTC")).toBe("01/08, 00:30");
   });
 
   it("fullDate para o campo de data do modal", () => {

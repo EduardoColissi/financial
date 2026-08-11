@@ -12,15 +12,18 @@ import {
 /**
  * Ciclo de fatura de cartao de credito.
  *
- * Regras (C2 do plano):
- *  - uma compra pertence ao ciclo que fecha no PRIMEIRO fechamento >= a data da
- *    compra;
+ * Regras:
+ *  - uma compra pertence ao ciclo que fecha no primeiro fechamento ESTRITAMENTE
+ *    posterior a ela. A compra do proprio dia do fechamento ja' e' da fatura
+ *    seguinte: num cartao que fecha dia 05, o gasto de 05/08 e' cobrado na
+ *    fatura que fecha 05/09. E' o que o emissor faz — o dia do fechamento e' o
+ *    primeiro dia do ciclo novo, nao o ultimo do velho;
  *  - a fatura vence no mesmo mes do fechamento se `dueDay > closingDay`, senao
  *    no mes seguinte;
  *  - o `refMonth` da fatura e' o mes do VENCIMENTO (e' assim que o usuario
  *    pensa: "a fatura de setembro");
- *  - o melhor dia de compra e' o dia seguinte ao fechamento — comprar ali da' o
- *    prazo maximo ate' o pagamento.
+ *  - o melhor dia de compra e' o proprio dia do fechamento — o gasto dali cai na
+ *    fatura seguinte e ganha o prazo maximo ate' o pagamento.
  */
 
 export interface CardCycleConfig {
@@ -33,10 +36,18 @@ export interface CardCycleConfig {
 }
 
 export interface CardCycle {
-  /** Primeiro dia coberto pela fatura (dia seguinte ao fechamento anterior). */
+  /** Primeiro dia coberto pela fatura — o proprio dia do fechamento anterior. */
   periodStart: PlainDate;
-  /** Data de fechamento. Compras ate' aqui, inclusive, entram nesta fatura. */
+  /**
+   * Ultimo dia coberto: a vespera do fechamento.
+   *
+   * NAO e' a data de fechamento — essa e' `closingDate`. O que a fatura cobre e
+   * o dia em que ela fecha sao coisas diferentes desde que a compra do dia do
+   * fechamento passou a pertencer ao ciclo seguinte.
+   */
   periodEnd: PlainDate;
+  /** Data em que a fatura fecha. E' o rotulo que o usuario conhece. */
+  closingDate: PlainDate;
   dueDate: PlainDate;
   /** Mes de referencia da fatura = mes do vencimento. */
   refMonth: RefMonth;
@@ -54,38 +65,46 @@ function dueFor(closing: PlainDate, config: CardCycleConfig): PlainDate {
   return clampDay(dueMonth, config.dueDay);
 }
 
+/** Monta o ciclo a partir da data em que ele fecha. */
+function cycleClosingOn(config: CardCycleConfig, closingDate: PlainDate): CardCycle {
+  const previousClosing = closingIn(addMonths(monthOf(closingDate), -1), config.closingDay);
+  const dueDate = dueFor(closingDate, config);
+
+  return {
+    // O dia do fechamento anterior ABRE este ciclo: ele nao coube no ciclo que
+    // fechou naquele dia, entao e' a primeira compra deste.
+    periodStart: previousClosing,
+    periodEnd: addDays(closingDate, -1),
+    closingDate,
+    dueDate,
+    refMonth: monthOf(dueDate),
+  };
+}
+
 /** O ciclo em que uma compra feita em `purchaseDate` sera' faturada. */
 export function cycleFor(config: CardCycleConfig, purchaseDate: PlainDate): CardCycle {
   const monthOfPurchase = monthOf(purchaseDate);
   const thisMonthClosing = closingIn(monthOfPurchase, config.closingDay);
 
-  // Compra no proprio dia do fechamento ainda entra nesta fatura.
-  const periodEnd =
-    purchaseDate <= thisMonthClosing
+  // Comparacao ESTRITA: a compra do proprio dia do fechamento nao entra na
+  // fatura que fecha hoje, vai para a seguinte.
+  const closingDate =
+    purchaseDate < thisMonthClosing
       ? thisMonthClosing
       : closingIn(addMonths(monthOfPurchase, 1), config.closingDay);
 
-  const previousClosing = closingIn(addMonths(monthOf(periodEnd), -1), config.closingDay);
-  const dueDate = dueFor(periodEnd, config);
-
-  return {
-    periodStart: addDays(previousClosing, 1),
-    periodEnd,
-    dueDate,
-    refMonth: monthOf(dueDate),
-  };
+  return cycleClosingOn(config, closingDate);
 }
 
 /** O ciclo cuja fatura vence no mes de referencia informado. */
 export function cycleOfRefMonth(config: CardCycleConfig, ref: RefMonth): CardCycle {
   // Se vence no mes do fechamento, o fechamento e' no proprio mes; senao, no anterior.
   const closingMonth = config.dueDay > config.closingDay ? ref : addMonths(ref, -1);
-  const periodEnd = closingIn(closingMonth, config.closingDay);
-  const previousClosing = closingIn(addMonths(closingMonth, -1), config.closingDay);
 
   return {
-    periodStart: addDays(previousClosing, 1),
-    periodEnd,
+    ...cycleClosingOn(config, closingIn(closingMonth, config.closingDay)),
+    // O vencimento vem do mes pedido, nao do derivado: e' o que mantem
+    // `cycleOfRefMonth` inverso exato de `cycleFor`.
     dueDate: clampDay(ref, config.dueDay),
     refMonth: ref,
   };
@@ -99,7 +118,7 @@ export function cycleOfRefMonth(config: CardCycleConfig, ref: RefMonth): CardCyc
  * quando o dia de fechamento ja' passou.
  */
 export function daysToClose(cycle: CardCycle, today: PlainDate): number {
-  return daysBetween(today, cycle.periodEnd);
+  return daysBetween(today, cycle.closingDate);
 }
 
 /**
@@ -113,22 +132,26 @@ export function daysToClose(cycle: CardCycle, today: PlainDate): number {
  */
 export function closingLabel(cycle: CardCycle, today: PlainDate): string {
   const days = daysToClose(cycle, today);
-  if (days < 0) return `fechou em ${shortDate(cycle.periodEnd)}`;
+  if (days < 0) return `fechou em ${shortDate(cycle.closingDate)}`;
   if (days === 0) return "fecha hoje";
   if (days === 1) return "fecha amanhã";
   return `${days} dias para fechar`;
 }
 
 /**
- * Melhor dia de compra: o dia seguinte ao fechamento.
+ * Melhor dia de compra: o proprio dia do fechamento.
  *
- * Nos tres cartoes do design isto e' sempre `fechamento + 1`, mas o mock guarda
- * como campo independente — o que permite os dois valores divergirem em
- * silencio. Aqui e' derivado, com override apenas para emissores atipicos.
+ * E' o primeiro dia do ciclo novo — o gasto dali so' e' cobrado na fatura
+ * seguinte, que e' o prazo maximo possivel. Era `fechamento + 1` enquanto a
+ * compra do dia do fechamento ainda entrava na fatura que fechava; agora ela
+ * nao entra, e apontar o dia seguinte jogaria fora um dia de prazo.
+ *
+ * Derivado, nunca campo solto: guardado a parte, ele divergiria do fechamento
+ * em silencio. O override existe so' para emissor atipico.
  */
 export function bestPurchaseDay(config: CardCycleConfig): number {
   if (config.bestDayOverride != null) return config.bestDayOverride;
-  return (config.closingDay % 31) + 1;
+  return config.closingDay;
 }
 
 /** A compra cai dentro deste ciclo? */
@@ -146,7 +169,9 @@ export type StatementPhase = "paga" | "fechada" | "aberta";
  */
 export function statementPhase(cycle: CardCycle, today: PlainDate, paid: boolean): StatementPhase {
   if (paid) return "paga";
-  return today > cycle.periodEnd ? "fechada" : "aberta";
+  // No PROPRIO dia do fechamento ela ja' esta' fechada: o que se gasta nesse dia
+  // pertence ao ciclo seguinte.
+  return today >= cycle.closingDate ? "fechada" : "aberta";
 }
 
 /** A fatura partida em duas: o que ja' caiu nela e o que ainda vai cair. */

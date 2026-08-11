@@ -12,12 +12,13 @@ import {
   scheduledCharges,
   transactions,
 } from "@/db/schema";
+import { cycleFor } from "@/domain/card-cycle";
 import { canEdit, type EntryLink } from "@/domain/entry-edit";
 import type { Cents } from "@/domain/money";
 import { categoryKindOf, type EntryMethod, type EntryType, methodsFor } from "@/domain/new-entry";
 import { firstDayOf, monthOf, type PlainDate, plainDate } from "@/domain/period";
 import type { AppContext } from "./context";
-import { EntryError, statementIdFor } from "./entries";
+import { cycleConfigOf, EntryError, statementIdFor } from "./entries";
 import { reopenCharge, reopenStatement, skipCharge } from "./payments";
 
 /**
@@ -249,9 +250,20 @@ export async function updateEntry(
    * Competencia: quitacao NAO muda de mes quando a data do pagamento muda.
    * Pagar o aluguel de agosto no dia 3 de setembro continua sendo despesa de
    * agosto — a mesma regra que `payCharge` aplica ao criar o lancamento.
+   *
+   * No credito quem manda e' a fatura: o mes e' o do vencimento dela, pela mesma
+   * regra de `planEntry`. Mover a compra para depois do fechamento tem que mover
+   * o gasto de mes junto — senao a edicao deixaria o lancamento numa competencia
+   * que nao corresponde a fatura em que ele acabou de cair.
    */
   const competenceMonth =
-    link.kind === "none" ? firstDayOf(monthOf(cmd.occurredOn)) : original.competenceMonth;
+    link.kind === "none"
+      ? firstDayOf(
+          cartao
+            ? cycleFor(cycleConfigOf(cartao), cmd.occurredOn).refMonth
+            : monthOf(cmd.occurredOn)
+        )
+      : original.competenceMonth;
 
   await db.transaction(async (tx) => {
     await tx

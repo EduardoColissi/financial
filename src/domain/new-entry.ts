@@ -1,3 +1,4 @@
+import { type CardCycleConfig, cycleFor } from "./card-cycle";
 import { type CashEffect, cashEffect, type TransactionKind } from "./cash-flow";
 import { brl, type Cents, splitInstallments, sumCents } from "./money";
 import {
@@ -114,6 +115,14 @@ export interface EntryInput {
   installments: number;
   /** Toggle "repetir todo mes". Ignorado quando ha' parcelamento. */
   repeats: boolean;
+  /**
+   * Fechamento e vencimento do cartao escolhido. So' no credito.
+   *
+   * E' o que decide a COMPETENCIA da despesa: no credito ela e' o mes em que a
+   * fatura vence, e isso depende do ciclo do cartao. Sem a configuracao — na
+   * previa, antes de o usuario escolher o cartao — cai no mes da compra.
+   */
+  cardCycle?: CardCycleConfig | null;
 }
 
 /**
@@ -128,6 +137,14 @@ export type EntryShape = "transaction" | "installment-rule" | "recurring-rule";
 export interface EntryPlan {
   shape: EntryShape;
   kind: TransactionKind;
+  /**
+   * Em que mes o gasto PESA.
+   *
+   * Fora do cartao e' o mes da compra. No credito e' o mes em que a fatura
+   * vence, porque e' quando o dinheiro sai: uma assinatura comprada em 06/08 num
+   * cartao que fecha dia 05 so' e' paga em 12/09, e cobra-la de agosto punia um
+   * mes que nunca viu esse dinheiro sair.
+   */
   competenceMonth: RefMonth;
   /** Valor de cada parcela, na ordem. Um item so' quando e' a' vista. */
   schedule: Cents[];
@@ -144,7 +161,19 @@ export interface EntryPlan {
 
 export function planEntry(input: EntryInput): EntryPlan {
   const kind = kindOf(input.type);
-  const competenceMonth = monthOf(input.occurredOn);
+  /*
+   * Dois calendarios, e eles divergem no credito.
+   *
+   * `occurrenceMonth` e' o mes em que a compra ou a cobranca acontece — e' ele
+   * que indexa as ocorrencias da regra (`scheduled_charges.ref_month`) e conta
+   * as parcelas. `competenceMonth` e' o mes em que o gasto pesa: no credito, o
+   * do vencimento da fatura.
+   */
+  const occurrenceMonth = monthOf(input.occurredOn);
+  const competenceMonth =
+    input.onCredit && input.cardCycle
+      ? cycleFor(input.cardCycle, input.occurredOn).refMonth
+      : occurrenceMonth;
   const installments = Math.max(1, Math.trunc(input.installments));
   const parcelado = installments > 1;
   // Parcelamento manda: quem parcela em 10x ja' esta' repetindo por 10 meses, e
@@ -163,8 +192,10 @@ export function planEntry(input: EntryInput): EntryPlan {
     competenceMonth,
     schedule: parcelado ? splitInstallments(input.amountCents, installments) : [input.amountCents],
     dueDay: partsOfDate(input.occurredOn).day,
-    firstRefMonth: competenceMonth,
-    lastRefMonth: parcelado ? addMonths(competenceMonth, installments - 1) : null,
+    // A ocorrencia e' contada pelo mes da COBRANCA: a parcela 1 de 10 cai no mes
+    // da compra e a 10 nove meses depois, independente de onde a fatura vence.
+    firstRefMonth: occurrenceMonth,
+    lastRefMonth: parcelado ? addMonths(occurrenceMonth, installments - 1) : null,
     settlesOnPurchase: !input.onCredit,
     effect: cashEffect({ kind, onCredit: input.onCredit }),
     status: txStatus({

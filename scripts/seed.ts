@@ -63,9 +63,11 @@ const HISTORY_START = addMonths(MONTH, -7);
  * design mostra (TX vai de 27/07 a 01/08) e todas contam no mes corrente. E'
  * exatamente a distincao entre `occurred_on` e `competence_month`.
  */
-// Dia 20 do mes passado: antes do fechamento de todo cartao do seed, entao cai
-// na fatura que vence neste mes — a relacao vale em qualquer mes, porque
-// `cycleFor` compara dia do mes com `closingDay`.
+// Dia 20 do mes passado: cai na fatura que vence NESTE mes em todo cartao do
+// seed. Nos que fecham 28 e 02 por estar antes do fechamento; no que fecha 20
+// porque a compra do proprio dia do fechamento ja' pertence ao ciclo seguinte.
+// A relacao vale em qualquer mes — `cycleFor` compara dia do mes com
+// `closingDay`.
 const CREDIT_DATE = clampDay(PREV_MONTH, 20);
 const CASH_DATE = COMPETENCE;
 // `clampDay`, nao dia 30 cru: fevereiro nao tem dia 30 e `plainDate` recusaria.

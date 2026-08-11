@@ -134,6 +134,9 @@ function Dialog({ options }: { options: EntryFormOptions }) {
   }
 
   const amountCents = centsFromDigits(amount);
+  // O ciclo do cartao escolhido: e' ele que decide o mes em que o gasto pesa, e
+  // a previa precisa dizer o mesmo mes que a Server Action vai gravar.
+  const selectedCard = onCredit ? options.cards.find((c) => target.endsWith(c.id)) : undefined;
   const plan =
     amountCents > 0
       ? planEntry({
@@ -144,6 +147,13 @@ function Dialog({ options }: { options: EntryFormOptions }) {
           occurredOn: readDate(occurredOn, options.defaultDate),
           installments: canInstall ? installments : 1,
           repeats,
+          cardCycle: selectedCard
+            ? {
+                closingDay: selectedCard.closingDay,
+                dueDay: selectedCard.dueDay,
+                bestDayOverride: selectedCard.bestDayOverride,
+              }
+            : null,
         })
       : null;
 

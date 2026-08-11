@@ -261,8 +261,13 @@ export async function linkChargesToStatements(
  *
  * Nasce quando a cobranca cai (`due_date <= hoje`), nao quando ela e' gerada: o
  * que ainda vai ser cobrado e' previsao, e previsao inflaria o gasto do mes.
- * Competencia e' o mes da COBRANCA, nao o da fatura — a mesma regra da compra no
- * credito.
+ *
+ * Competencia e' o mes da FATURA, nao o da cobranca — a mesma regra da compra no
+ * credito. A WellHub cobrada em 06/08 num cartao que fecha dia 05 so' e' paga em
+ * 12/09: cobrar de agosto tirava o valor de um mes em que nada saiu do caixa, e
+ * o mes do pagamento nao via o gasto. Por isso `st.ref_month`, e nao
+ * `sc.ref_month` — a cobranca continua indexada pelo mes em que cai, o dinheiro
+ * pesa no mes em que sai.
  *
  * Varre TODOS os meses, nao so' o recem-materializado, pelo motivo de
  * `linkChargesToStatements`: e' o que resgata a cobranca que caiu num mes que
@@ -291,7 +296,7 @@ export async function postDueCharges(db: Database, target: MaterializeTarget): P
       select sc.user_id,
              'expense',
              sc.due_date,
-             sc.ref_month,
+             st.ref_month,
              rr.name,
              sc.amount_cents,
              rr.category_id,
@@ -311,6 +316,7 @@ export async function postDueCharges(db: Database, target: MaterializeTarget): P
              'charge:' || sc.id
         from scheduled_charges sc
         join recurring_rules rr on rr.id = sc.rule_id
+        join card_statements st on st.id = sc.statement_id
        where sc.user_id = ${target.userId}
          and rr.card_id is not null
          and sc.statement_id is not null

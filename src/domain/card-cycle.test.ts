@@ -23,16 +23,23 @@ const INTER: CardCycleConfig = { closingDay: 20, dueDay: 27 };
 const HOJE = d("2026-08-01");
 
 describe("melhor dia de compra", () => {
-  it("e' derivado do fechamento, batendo com os tres cartoes do design", () => {
-    // O mock guarda `melhor` como campo independente: 29, 3 e 21 — e em 3/3
-    // e' exatamente fechamento + 1. Derivar impede que os dois divirjam.
-    expect(bestPurchaseDay(NUBANK)).toBe(29);
-    expect(bestPurchaseDay(ITAU)).toBe(3);
-    expect(bestPurchaseDay(INTER)).toBe(21);
+  /**
+   * O mock do design guarda `melhor` como campo independente — 29, 3 e 21, ou
+   * seja, fechamento + 1. Aquilo valia enquanto a compra do dia do fechamento
+   * ainda entrava na fatura que fechava; nao vale mais. Hoje o proprio dia do
+   * fechamento ja' abre o ciclo seguinte, e ele E' o melhor dia: apontar o
+   * seguinte jogaria fora um dia inteiro de prazo.
+   */
+  it("e' o proprio dia do fechamento", () => {
+    expect(bestPurchaseDay(NUBANK)).toBe(28);
+    expect(bestPurchaseDay(ITAU)).toBe(2);
+    expect(bestPurchaseDay(INTER)).toBe(20);
   });
 
-  it("da a volta quando o fechamento e' no dia 31", () => {
-    expect(bestPurchaseDay({ closingDay: 31, dueDay: 10 })).toBe(1);
+  it("nao da mais a volta no fim do mes", () => {
+    // Era 1 quando o melhor dia era fechamento + 1. Fechando dia 31, o melhor
+    // dia e' 31 — e em fevereiro o clamp do calendario resolve.
+    expect(bestPurchaseDay({ closingDay: 31, dueDay: 10 })).toBe(31);
   });
 
   it("respeita override de emissor atipico", () => {
@@ -53,8 +60,12 @@ describe("dias para fechar", () => {
   it("usa os rotulos do design", () => {
     expect(closingLabel(aberto(NUBANK, HOJE), HOJE)).toBe("27 dias para fechar");
     expect(closingLabel(aberto(ITAU, HOJE), HOJE)).toBe("fecha amanhã");
+
+    // "fecha hoje" e' do ciclo que fecha hoje — que em 20/08 ja' NAO e' o ciclo
+    // aberto: uma compra de hoje cai no proximo.
     const vinte = d("2026-08-20");
-    expect(closingLabel(aberto(INTER, vinte), vinte)).toBe("fecha hoje");
+    expect(closingLabel(cycleFor(INTER, d("2026-08-19")), vinte)).toBe("fecha hoje");
+    expect(closingLabel(aberto(INTER, vinte), vinte)).toBe("31 dias para fechar");
   });
 
   /**
@@ -65,7 +76,7 @@ describe("dias para fechar", () => {
   it("diz que fechou quando o ciclo exibido ja' passou", () => {
     const fecha05: CardCycleConfig = { closingDay: 5, dueDay: 12 };
     const agosto = cycleOfRefMonth(fecha05, m("2026-08"));
-    expect(agosto.periodEnd).toBe("2026-08-05");
+    expect(agosto.closingDate).toBe("2026-08-05");
     expect(closingLabel(agosto, d("2026-08-08"))).toBe("fechou em 05/08");
     // A fatura de setembro, vista do mesmo dia, ainda esta' acumulando.
     expect(closingLabel(cycleOfRefMonth(fecha05, m("2026-09")), d("2026-08-08"))).toBe(
@@ -94,9 +105,11 @@ describe("dias para fechar", () => {
     expect(designFormula(31, 1)).toBe(30); // o design erraria por 3 dias
   });
 
-  it("zero no proprio dia do fechamento", () => {
+  it("no dia do fechamento, quem marca zero e' o ciclo que fecha — nao o aberto", () => {
     const fechamento = d("2026-08-28");
-    expect(daysToClose(aberto(NUBANK, fechamento), fechamento)).toBe(0);
+    expect(daysToClose(cycleFor(NUBANK, d("2026-08-27")), fechamento)).toBe(0);
+    // A compra de hoje ja' e' da proxima fatura, que fecha so' em 28/09.
+    expect(daysToClose(aberto(NUBANK, fechamento), fechamento)).toBe(31);
   });
 });
 
@@ -105,38 +118,53 @@ describe("em qual fatura a compra cai", () => {
     // Achado 9 do plano: as compras de 29/07 e 31/07 no Nubank aparecem no
     // design dentro da fatura ja' fechada, mas o fechamento foi em 28/07.
     const ciclo = cycleFor(NUBANK, d("2026-07-31"));
-    expect(ciclo.periodEnd).toBe("2026-08-28");
+    expect(ciclo.closingDate).toBe("2026-08-28");
     expect(ciclo.dueDate).toBe("2026-09-05");
     expect(ciclo.refMonth).toBe("2026-09");
   });
 
-  it("compra no proprio dia do fechamento ainda entra na fatura que fecha", () => {
+  /**
+   * O caso que o dono trouxe: cartao que fecha dia 05, compra em 05/08. A
+   * fatura que fecha nesse dia ja' esta' fechada para gasto novo — o valor vai
+   * para a que fecha em 05/09 e e' paga em 12/09.
+   */
+  it("compra no proprio dia do fechamento ja' e' da fatura seguinte", () => {
     const ciclo = cycleFor(NUBANK, d("2026-07-28"));
-    expect(ciclo.periodEnd).toBe("2026-07-28");
+    expect(ciclo.closingDate).toBe("2026-08-28");
+    expect(ciclo.dueDate).toBe("2026-09-05");
+    expect(ciclo.refMonth).toBe("2026-09");
+  });
+
+  it("a vespera do fechamento e' o ultimo dia que ainda entra", () => {
+    const ciclo = cycleFor(NUBANK, d("2026-07-27"));
+    expect(ciclo.closingDate).toBe("2026-07-28");
+    expect(ciclo.periodEnd).toBe("2026-07-27");
     expect(ciclo.dueDate).toBe("2026-08-05");
-    expect(ciclo.refMonth).toBe("2026-08");
   });
 
   it("compra antes do fechamento entra na fatura corrente", () => {
     const ciclo = cycleFor(NUBANK, d("2026-07-10"));
-    expect(ciclo.periodStart).toBe("2026-06-29");
-    expect(ciclo.periodEnd).toBe("2026-07-28");
+    expect(ciclo.periodStart).toBe("2026-06-28");
+    expect(ciclo.periodEnd).toBe("2026-07-27");
+    expect(ciclo.closingDate).toBe("2026-07-28");
     expect(ciclo.dueDate).toBe("2026-08-05");
   });
 
   it("vence no mesmo mes quando o vencimento vem depois do fechamento", () => {
     // Itau fecha dia 2 e vence dia 10: mesmo mes.
     const ciclo = cycleFor(ITAU, d("2026-08-01"));
-    expect(ciclo.periodEnd).toBe("2026-08-02");
+    expect(ciclo.closingDate).toBe("2026-08-02");
     expect(ciclo.dueDate).toBe("2026-08-10");
     expect(ciclo.refMonth).toBe("2026-08");
   });
 
-  it("o periodo e' continuo: o inicio e' o dia seguinte ao fechamento anterior", () => {
+  it("o periodo e' continuo: o fechamento anterior abre o ciclo seguinte", () => {
     const julho = cycleFor(NUBANK, d("2026-07-10"));
     const agosto = cycleFor(NUBANK, d("2026-08-10"));
-    expect(agosto.periodStart).toBe("2026-07-29");
-    expect(julho.periodEnd).toBe("2026-07-28");
+    expect(julho.closingDate).toBe("2026-07-28");
+    expect(julho.periodEnd).toBe("2026-07-27");
+    // O dia 28/07 fecha julho e ja' e' o primeiro dia de agosto na fatura.
+    expect(agosto.periodStart).toBe("2026-07-28");
   });
 
   it("nao deixa buraco nem sobreposicao ao longo de um ano", () => {
@@ -147,11 +175,12 @@ describe("em qual fatura a compra cai", () => {
         const date = addDays(d("2026-01-01"), i);
         const ciclo = cycleFor(config, date);
         expect(isInCycle(ciclo, date)).toBe(true);
-        // A data de fechamento pertence ao proprio ciclo que fecha.
-        expect(cycleFor(config, ciclo.periodEnd).periodEnd).toBe(ciclo.periodEnd);
-        // O dia seguinte ao fechamento ja' e' o proximo ciclo.
-        const seguinte = cycleFor(config, addDays(ciclo.periodEnd, 1));
-        expect(seguinte.periodStart).toBe(addDays(ciclo.periodEnd, 1));
+        // A vespera do fechamento ainda pertence a este ciclo.
+        expect(cycleFor(config, ciclo.periodEnd).closingDate).toBe(ciclo.closingDate);
+        // E o dia do fechamento ja' abre o proximo.
+        const seguinte = cycleFor(config, ciclo.closingDate);
+        expect(seguinte.periodStart).toBe(ciclo.closingDate);
+        expect(seguinte.closingDate).not.toBe(ciclo.closingDate);
       }
     }
   });
@@ -159,7 +188,7 @@ describe("em qual fatura a compra cai", () => {
   it("fevereiro: cartao que fecha 31 fecha no ultimo dia do mes", () => {
     const fechaNo31: CardCycleConfig = { closingDay: 31, dueDay: 10 };
     const ciclo = cycleFor(fechaNo31, d("2026-02-15"));
-    expect(ciclo.periodEnd).toBe("2026-02-28");
+    expect(ciclo.closingDate).toBe("2026-02-28");
     expect(ciclo.dueDate).toBe("2026-03-10");
   });
 });
@@ -168,6 +197,7 @@ describe("ciclo a partir do mes de referencia", () => {
   it("e' o inverso de cycleFor", () => {
     const porCompra = cycleFor(NUBANK, d("2026-07-31"));
     const porMes = cycleOfRefMonth(NUBANK, m("2026-09"));
+    expect(porMes.closingDate).toBe(porCompra.closingDate);
     expect(porMes.periodEnd).toBe(porCompra.periodEnd);
     expect(porMes.dueDate).toBe(porCompra.dueDate);
     expect(porMes.periodStart).toBe(porCompra.periodStart);
@@ -175,7 +205,8 @@ describe("ciclo a partir do mes de referencia", () => {
 
   it("funciona para cartao que vence no mes do fechamento", () => {
     const ciclo = cycleOfRefMonth(ITAU, m("2026-08"));
-    expect(ciclo.periodEnd).toBe("2026-08-02");
+    expect(ciclo.closingDate).toBe("2026-08-02");
+    expect(ciclo.periodEnd).toBe("2026-08-01");
     expect(ciclo.dueDate).toBe("2026-08-10");
   });
 });
@@ -194,7 +225,8 @@ describe("os quatro numeros do painel", () => {
   const fase = (mes: string, paid = false) => statementPhase(fatura(mes), HOJE_08, paid);
 
   it("a fatura de agosto ja' fechou e nao recebe mais nada", () => {
-    expect(fatura("2026-08").periodEnd).toBe("2026-08-05");
+    expect(fatura("2026-08").closingDate).toBe("2026-08-05");
+    expect(fatura("2026-08").periodEnd).toBe("2026-08-04");
     expect(fase("2026-08")).toBe("fechada");
 
     // Nenhuma das duas assinaturas cai aqui: 06/08 e 15/08 sao posteriores ao
@@ -204,10 +236,19 @@ describe("os quatro numeros do painel", () => {
     expect(f).toEqual({ toPayCents: 0, formingCents: 0, forecastCents: 0, totalCents: 0 });
   });
 
-  it("a de setembro esta' aberta e mostra as duas assinaturas", () => {
+  it("ja' esta' fechada no PROPRIO dia do fechamento", () => {
+    // Em 05/08 ninguem mais consegue pendurar gasto na fatura que fecha nesse
+    // dia — quem gasta em 05/08 cai na de setembro.
+    expect(statementPhase(fatura("2026-08"), d("2026-08-05"), false)).toBe("fechada");
+    expect(cycleFor(CROMA, d("2026-08-05")).refMonth).toBe("2026-09");
+  });
+
+  it("a de setembro esta' aberta e recebe tudo que veio do dia 05 em diante", () => {
     const setembro = fatura("2026-09");
-    expect(setembro.periodStart).toBe("2026-08-06");
-    expect(setembro.periodEnd).toBe("2026-09-05");
+    expect(setembro.periodStart).toBe("2026-08-05");
+    expect(setembro.periodEnd).toBe("2026-09-04");
+    expect(setembro.closingDate).toBe("2026-09-05");
+    expect(setembro.dueDate).toBe("2026-09-12");
     expect(fase("2026-09")).toBe("aberta");
 
     // WellHub (06/08) ja' caiu; Paramount+ (15/08) ainda vai cair.

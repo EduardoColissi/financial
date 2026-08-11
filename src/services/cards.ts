@@ -76,6 +76,8 @@ export interface CardView {
   dueDay: number;
   bestDay: number;
   periodStart: PlainDate;
+  /** Ultimo dia coberto — a vespera do fechamento, nao o dia dele. */
+  periodEnd: PlainDate;
   closingOn: PlainDate;
   dueOn: PlainDate;
   closingLabel: string;
@@ -264,7 +266,8 @@ export async function getCards(ctx: AppContext, month: RefMonth): Promise<CardsR
       dueDay: card.dueDay,
       bestDay: bestPurchaseDay(config),
       periodStart: cycle.periodStart,
-      closingOn: cycle.periodEnd,
+      periodEnd: cycle.periodEnd,
+      closingOn: cycle.closingDate,
       dueOn: cycle.dueDate,
       closingLabel: closingLabel(cycle, ctx.today),
       phase,

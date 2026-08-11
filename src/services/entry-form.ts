@@ -24,10 +24,23 @@ export interface CategoryOption extends OptionRow {
   kind: "expense" | "income" | "investment";
 }
 
+/**
+ * O cartao leva o ciclo junto.
+ *
+ * A previa promete em que mes o gasto vai pesar, e no credito isso e' o mes do
+ * vencimento da fatura — que depende do fechamento. Sem esses tres campos o
+ * modal diria "agosto" para uma compra que so' e' paga em setembro.
+ */
+export interface CardOption extends OptionRow {
+  closingDay: number;
+  dueDay: number;
+  bestDayOverride: number | null;
+}
+
 export interface EntryFormOptions {
   categories: CategoryOption[];
   accounts: OptionRow[];
-  cards: OptionRow[];
+  cards: CardOption[];
   /** Destinos de aporte. Ocupam o lugar da categoria quando o tipo e' aporte. */
   sectors: OptionRow[];
   /** Data ja' preenchida no formulario. */
@@ -69,7 +82,14 @@ export async function getEntryFormOptions(
       .orderBy(asc(accounts.sortOrder)),
 
     db
-      .select({ id: creditCards.id, name: creditCards.name, color: creditCards.color })
+      .select({
+        id: creditCards.id,
+        name: creditCards.name,
+        color: creditCards.color,
+        closingDay: creditCards.closingDay,
+        dueDay: creditCards.dueDay,
+        bestDayOverride: creditCards.bestDayOverride,
+      })
       .from(creditCards)
       .where(eq(creditCards.userId, ctx.userId))
       .orderBy(asc(creditCards.sortOrder)),

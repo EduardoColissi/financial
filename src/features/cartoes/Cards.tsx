@@ -74,7 +74,9 @@ function CardPanel({ card, hoje }: { card: CardView; hoje: string }) {
               primary
               label="A pagar agora"
               cents={card.toPayCents}
-              hint={`${shortDate(card.periodStart)} a ${shortDate(card.closingOn)} · vence ${shortDate(card.dueOn)}`}
+              // O intervalo COBERTO vai ate' a vespera do fechamento: o gasto do
+              // dia em que a fatura fecha ja' e' da proxima.
+              hint={`${shortDate(card.periodStart)} a ${shortDate(card.periodEnd)} · vence ${shortDate(card.dueOn)}`}
             />
             <Figure label="Em formação" cents={card.formingCents} hint="já caiu nesta fatura" />
             <Figure

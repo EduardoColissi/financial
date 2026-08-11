@@ -102,13 +102,39 @@ describe("efeito no caixa", () => {
     expect(plan.effect.countsAsContribution).toBe(true);
   });
 
-  it("competencia e' o mes da COMPRA, nao o do vencimento da fatura", () => {
+  /**
+   * O caso do dono: WellHub comprada em 06/08 num cartao que fecha dia 05 e
+   * vence dia 12. Ela cai na fatura que fecha 05/09, paga em 12/09 — e e' em
+   * setembro que o dinheiro sai. Cobrar de agosto tirava o valor de um mes que
+   * nao viu esse dinheiro sair, e deixava setembro sem o gasto que pagou.
+   */
+  it("no credito, competencia e' o mes em que a FATURA vence", () => {
     const plan = planEntry({
       ...base,
       method: "credit",
       onCredit: true,
-      occurredOn: plainDate("2026-08-29"),
+      occurredOn: plainDate("2026-08-06"),
+      cardCycle: { closingDay: 5, dueDay: 12 },
     });
+    expect(plan.competenceMonth).toBe(refMonth("2026-09"));
+    // A ocorrencia continua indexada pelo mes da compra.
+    expect(plan.firstRefMonth).toBe(refMonth("2026-08"));
+  });
+
+  it("no credito, compra antes do fechamento pesa no mes da fatura mais proxima", () => {
+    const plan = planEntry({
+      ...base,
+      method: "credit",
+      onCredit: true,
+      occurredOn: plainDate("2026-08-04"),
+      cardCycle: { closingDay: 5, dueDay: 12 },
+    });
+    // Fecha em 05/08 e vence em 12/08: pesa em agosto mesmo.
+    expect(plan.competenceMonth).toBe(refMonth("2026-08"));
+  });
+
+  it("fora do cartao, competencia e' o mes da compra", () => {
+    const plan = planEntry({ ...base, method: "pix", occurredOn: plainDate("2026-08-29") });
     expect(plan.competenceMonth).toBe(refMonth("2026-08"));
   });
 

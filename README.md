@@ -134,6 +134,25 @@ cobrança recorrente que cai em fatura: ela já está dentro do total do cartão
 por isso `open_bills` exclui quem tem `statement_id`. Sem esse filtro, uma
 assinatura no cartão seria contada duas vezes.
 
+### Em que mês o gasto no cartão pesa
+
+No crédito, a competência é o mês em que a **fatura vence** — não o da compra.
+Uma assinatura cobrada em 06/08 num cartão que fecha dia 05 cai na fatura que
+fecha 05/09 e é paga em 12/09: ela pesa em **setembro**, que é quando o dinheiro
+sai. Cobrar de agosto tirava o valor de um mês em que nada saiu do caixa e
+deixava setembro sem o gasto que de fato pagou.
+
+O corte do ciclo é fechado no início e aberto no fim: a fatura cobre do dia do
+fechamento anterior até a **véspera** do próximo. A compra do próprio dia do
+fechamento já é da fatura seguinte — é o que o emissor faz, e por isso o melhor
+dia de compra é o dia do fechamento, não o seguinte.
+
+Quem decide as duas coisas é `domain/card-cycle.ts`; `planEntry` lê o ciclo do
+cartão para carimbar a competência, e `postDueCharges` usa o mês da fatura
+ligada. As duas regras entraram juntas na migration
+`0012_credit_weighs_on_the_statement_month`, que também realinha o que já estava
+gravado.
+
 ## Custo de vida e reserva
 
 Cobrança marcada como **obrigatória** entra no custo de vida. A média corre

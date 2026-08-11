@@ -85,6 +85,13 @@
       "when": 1785900050710,
       "tag": "0011_sectors_own_the_aporte",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1785986450710,
+      "tag": "0012_credit_weighs_on_the_statement_month",
+      "breakpoints": true
     }
   ]
 }

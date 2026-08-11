@@ -13,7 +13,7 @@ import {
   scheduledCharges,
   transactions,
 } from "@/db/schema";
-import { cycleFor } from "@/domain/card-cycle";
+import { type CardCycleConfig, cycleFor } from "@/domain/card-cycle";
 import type { Cents } from "@/domain/money";
 import {
   allowsInstallments,
@@ -159,6 +159,7 @@ export async function createEntry(ctx: AppContext, cmd: CreateEntryCommand): Pro
     occurredOn: cmd.occurredOn,
     installments: cmd.installments,
     repeats: cmd.repeats,
+    cardCycle: card ? cycleConfigOf(card) : null,
   });
 
   if (plan.shape === "transaction") {
@@ -170,6 +171,15 @@ export async function createEntry(ctx: AppContext, cmd: CreateEntryCommand): Pro
 type Plan = ReturnType<typeof planEntry>;
 type Card = Awaited<ReturnType<typeof db.query.creditCards.findFirst>> | null;
 
+/** A linha do cartao vira a configuracao de ciclo que o dominio entende. */
+export function cycleConfigOf(card: NonNullable<Card>): CardCycleConfig {
+  return {
+    closingDay: card.closingDay,
+    dueDay: card.dueDay,
+    bestDayOverride: card.bestDayOverride,
+  };
+}
+
 /**
  * Resolve — e materializa, se preciso — a fatura em que a compra cai.
  *
@@ -178,10 +188,7 @@ type Card = Awaited<ReturnType<typeof db.query.creditCards.findFirst>> | null;
  * retroativamente.
  */
 export async function statementIdFor(ctx: AppContext, card: NonNullable<Card>, on: PlainDate) {
-  const cycle = cycleFor(
-    { closingDay: card.closingDay, dueDay: card.dueDay, bestDayOverride: card.bestDayOverride },
-    on
-  );
+  const cycle = cycleFor(cycleConfigOf(card), on);
   // Comprar num mes ainda nao aberto na tela e' normal — a fatura precisa existir.
   await materializeMonth(db, { userId: ctx.userId, today: ctx.today }, cycle.refMonth);
 
@@ -356,10 +363,7 @@ async function createRule(
           .update(transactions)
           .set({ amountCents: firstAmount, updatedAt: new Date() })
           .where(
-            and(
-              eq(transactions.id, charge.transactionId),
-              eq(transactions.userId, ctx.userId)
-            )
+            and(eq(transactions.id, charge.transactionId), eq(transactions.userId, ctx.userId))
           );
       }
     }

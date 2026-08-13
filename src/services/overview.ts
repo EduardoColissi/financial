@@ -53,11 +53,15 @@ export interface OverviewData {
   due7: DueRow[];
   due7TotalCents: Cents;
   /**
-   * Quando o ultimo LANCAMENTO foi registrado — nao cadastro.
+   * Quando o dono registrou algo pela ultima vez.
    *
-   * Serve para saber se o painel esta' em dia. Cadastrar um cartao nao e' o
-   * mesmo que lancar um gasto: contar cadastro aqui daria a sensacao de estar
-   * em dia justamente em quem so' mexeu na configuracao.
+   * E' o marco de conferencia do extrato: "a partir de que dia e hora preciso
+   * olhar o banco para lancar o que falta". Por isso conta lancamento, conta a
+   * pagar e assinatura — tudo que e' registro de dinheiro —, e NAO conta o que a
+   * aplicacao gerou sozinha ao abrir um mes (ver a query em `getOverview`).
+   *
+   * Cadastro de estrutura — conta bancaria, cartao, categoria — fica de fora:
+   * mexer na configuracao nao adianta a conferencia do extrato.
    */
   lastEntryAt: Date | null;
 }
@@ -146,8 +150,27 @@ export async function getOverview(ctx: AppContext, month: RefMonth): Promise<Ove
   // Ultimo lancamento: olha TODOS os meses, nao so' o aberto. Perguntar "quando
   // lancei pela ultima vez" e receber "nunca" so' porque o mes visitado esta'
   // vazio seria resposta errada.
+  //
+  // So' entra o que o DONO registrou. `postDueCharges` (db/materialize) roda a
+  // cada abertura de mes e converte cobranca vencida em lancamento; esses nascem
+  // com `created_at = agora` e faziam o KPI marcar o horario do LOGIN — a
+  // pergunta "ate' onde ja' lancei?" respondida com "agora mesmo", sempre.
+  //
+  // `external_id` e' o que separa maquina de gente: so' `postDueCharges` o
+  // preenche (`charge:<id>`), e todo lancamento vindo de acao humana o deixa
+  // nulo. Filtrar por `source` NAO serviria — marcar uma conta agendada como
+  // paga (services/payments) tambem grava `source = 'recurring'`, e essa e' uma
+  // acao do dono que precisa contar.
+  //
+  // Cadastrar assinatura ou conta a pagar tambem conta: a assinatura no cartao
+  // so' vira lancamento quando a cobranca cai, entao sem `recurring_rules` o
+  // marco ignoraria justamente o registro que o dono acabou de fazer.
   const ultimo = await db.execute<{ at: string | null }>(sql`
-    select max(created_at)::text as at from transactions where user_id = ${ctx.userId}
+    select greatest(
+             (select max(created_at) from transactions
+               where user_id = ${ctx.userId} and external_id is null),
+             (select max(created_at) from recurring_rules where user_id = ${ctx.userId})
+           )::text as at
   `);
   const lastEntryAt = ultimo.rows[0]?.at ? new Date(ultimo.rows[0].at) : null;
 

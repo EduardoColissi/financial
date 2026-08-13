@@ -13,6 +13,7 @@ import {
   type RefMonth,
   refMonth,
 } from "@/domain/period";
+import { getCards } from "./cards";
 import type { AppContext } from "./context";
 import { ensureMonthMaterialized } from "./materialize";
 import { getCategories, getTransactions } from "./queries";
@@ -53,6 +54,18 @@ export interface OverviewData {
   due7: DueRow[];
   due7TotalCents: Cents;
   /**
+   * Os tres compromissos do mes, cada um no seu recorte.
+   *
+   * ATENCAO: eles se sobrepoem de proposito e NAO devem ser somados. A
+   * assinatura de cartao esta' dentro de `subscriptionsMonthCents` E dentro de
+   * `cardsMonthCents` — sao a mesma despesa vista por dois angulos: "quanto
+   * custam minhas assinaturas" e "quanto vou pagar de fatura". Somar os tres
+   * cobraria a mesma Netflix duas vezes.
+   */
+  billsMonthCents: Cents;
+  subscriptionsMonthCents: Cents;
+  cardsMonthCents: Cents;
+  /**
    * Quando o dono registrou algo pela ultima vez.
    *
    * E' o marco de conferencia do extrato: "a partir de que dia e hora preciso
@@ -70,7 +83,15 @@ export async function getOverview(ctx: AppContext, month: RefMonth): Promise<Ove
   await ensureMonthMaterialized(ctx, month);
   const ref = firstDayOf(month);
 
-  const [tx, cat] = await Promise.all([getTransactions(ctx, month), getCategories(ctx, month)]);
+  // `getCards` entra aqui pelo mesmo motivo de `getTransactions`: o total das
+  // faturas ja' existe calculado na aba Cartoes, com todas as regras de ciclo,
+  // estorno e cobranca-que-virou-lancamento. Refazer a soma aqui seria a segunda
+  // verdade sobre o mesmo numero — o painel divergiria da aba de origem.
+  const [tx, cat, cards] = await Promise.all([
+    getTransactions(ctx, month),
+    getCategories(ctx, month),
+    getCards(ctx, month),
+  ]);
 
   const income = tx.rows
     .filter((t) => t.kind === "income")
@@ -147,6 +168,29 @@ export async function getOverview(ctx: AppContext, month: RefMonth): Promise<Ove
     fixed: !r.isVariable,
   }));
 
+  // ── compromissos do mes, por tipo ─────────────────────────────────────────
+  // `bill` vence numa conta ou boleto, `subscription` cai na fatura do cartao —
+  // e' o eixo do MEIO, nao "fixa x parcelada" (ver schema/enums.recurrenceKind).
+  //
+  // A soma segue `sc.ref_month`, o mes em que a cobranca CAI, e nao o mes da
+  // fatura: a pergunta aqui e' "quanto de assinatura eu tenho neste mes", nao
+  // "quanto vou pagar de fatura" — essa e' `cardsMonthCents`, que segue a fatura
+  // justamente porque e' o mes em que o dinheiro sai.
+  //
+  // `skipped` fica de fora porque nao vai ser cobrada. A variavel sem estimativa
+  // nasce zerada e entra somando nada ate' alguem digitar o valor — melhor que
+  // sumir da conta.
+  const compromissos = await db.execute<{ kind: string; total: string }>(sql`
+    select rr.kind, coalesce(sum(sc.amount_cents), 0)::text as total
+      from scheduled_charges sc
+      join recurring_rules rr on rr.id = sc.rule_id
+     where sc.user_id = ${ctx.userId}
+       and sc.ref_month = ${ref}
+       and sc.status <> 'skipped'
+     group by rr.kind
+  `);
+  const porTipo = new Map(compromissos.rows.map((r) => [r.kind, Number(r.total)]));
+
   // Ultimo lancamento: olha TODOS os meses, nao so' o aberto. Perguntar "quando
   // lancei pela ultima vez" e receber "nunca" so' porque o mes visitado esta'
   // vazio seria resposta errada.
@@ -187,6 +231,12 @@ export async function getOverview(ctx: AppContext, month: RefMonth): Promise<Ove
     flow,
     due7,
     due7TotalCents: cents(due7.reduce<number>((a, d) => a + d.amountCents, 0)),
+    billsMonthCents: cents(porTipo.get("bill") ?? 0),
+    subscriptionsMonthCents: cents(porTipo.get("subscription") ?? 0),
+    // `totalCents`, nao `openTotalCents`: este ultimo so' conta fatura FECHADA e
+    // nao paga, para o aviso do topo da aba Cartoes. Aqui a pergunta e' quanto a
+    // fatura do mes soma — incluindo a que ainda esta' em formacao e a ja' paga.
+    cardsMonthCents: cents(cards.cards.reduce<number>((a, c) => a + c.totalCents, 0)),
   };
 }
 

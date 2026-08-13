@@ -135,6 +135,30 @@ export function Overview({
         />
       </div>
 
+      {/*
+        Os compromissos do mês, por onde eles saem. Os três NÃO somam entre si —
+        a assinatura de cartão aparece no seu próprio número e de novo dentro da
+        fatura. São recortes da mesma despesa, e as notas dizem isso para que
+        ninguém tente fechar a conta somando os três.
+      */}
+      <div className={s.health}>
+        <HealthItem
+          label="Contas do mês"
+          value={brl(data.billsMonthCents)}
+          note="boletos e débitos que vencem no mês"
+        />
+        <HealthItem
+          label="Assinaturas do mês"
+          value={brl(data.subscriptionsMonthCents)}
+          note="cobradas no mês — já contam na fatura"
+        />
+        <HealthItem
+          label="Faturas dos cartões"
+          value={brl(data.cardsMonthCents)}
+          note="soma das faturas deste mês"
+        />
+      </div>
+
       <div className={s.grid}>
         <div className={s.col}>
           <Card>
